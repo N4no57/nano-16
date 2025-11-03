@@ -1,0 +1,148 @@
+===========================
+=      ISA REF SHEET      =
+===========================
+
+READ NAN-ISA.txt TO UNDERSTAND REFERENCED KEYWORDS IN THIS DOCUMENTATION
+
+=== OVERVIEW ===
+* In extended subheader EXT bit is 1 and CPU reads extra byte effectively giving an extra 11-bit opcode encoding
+* DIR bit determined directionality, explained in NAN-ISA.txt
+
+=== OPCODE TABLE ===
+== CLASS - 00 ==
+ADD  OPC=000
+SUB  OPC=001
+AND  OPC=010
+OR   OPC=011
+XOR  OPC=100
+CMP  OPC=101
+TEST OPC=110
+SHF  OPC=111
+= EXTENDED =
+ADC OPC=00000000000
+INC OPC=00000000001
+DEC OPC=00000000010
+MUL OPC=00000000011
+DIV OPC=00000000100
+NOT OPC=00000000101
+
+== CLASS - 01 ==
+MOV  OPC=000
+PUSH OPC=001
+POP  OPC=010
+INB  OPC=011
+OUTB OPC=100
+LEA  OPC=101
+
+== CLASS - 10 ==
+JMP  OPC=000
+JZ   OPC=001
+JNZ  OPC=010
+JC   OPC=011
+JNC  OPC=100
+CALL OPC=101
+RET  OPC=111
+= EXTENDED =
+JA   OPC=00000000000
+JAE  OPC=00000000001
+JB   OPC=00000000010
+JBE  OPC=00000000011
+JG   OPC=00000000100
+JGE  OPC=00000000101
+JL   OPC=00000000110
+JLE  OPC=00000000111
+
+== CLASS - 11 ==
+NOP  OPC=000
+HLT  OPC=001
+
+=== FLAG BEHAVIOUR ===
+| inst | CF | ZF | OF | NF |
+| ADD  | O  | O  | O  | O  |
+| SUB  | O  | O  | O  | O  |
+| AND  | X  | O  | X  | O  |
+| OR   | X  | O  | X  | O  |
+| XOR  | X  | O  | X  | O  |
+| NOT  | X  | O  | X  | X  |
+| CMP  | O  | O  | O  | X  |
+| SHR  | O  | O  | X  | O  |
+| SHL  | O  | O  | X  | O  |
+| ADC  | O  | O  | O  | O  |
+| INC  | O  | O  | O  | O  |
+| DEC  | O  | O  | O  | O  |
+| MUL  | O  | X  | O  | X  |
+| DIV  | O  | X  | O  | X  |
+
+O - flag affected
+X - flag unaffected
+
+=== ASSEMBLY SYNTAX ===
+== GENERAL SYNTAX RULES ==
+
+INSTR [DEST, SRC]
+
+operands:
+	DEST - destination operand
+	SRC  - source operand
+	Both may be registers, memory references, or immediated depending on the instruction class.
+
+== OPERAND FORMS ==
+	REG	-> A, B, C, D, etc. All registers mentioned in NAN-ISA.txt
+	MEM	-> [REG]
+		   [REG ± DISP]
+		   [REG + REG*SCALE]
+		   [REG + REG*SCALE ± DISP]
+		   [ABS] -> absolute addressing (no register)
+	IMM	-> <value>
+
+== OPERAND RULES ==
+* Two-operand instructions:
+	INSTR DEST, SRC
+	 - Example: ADD A, B
+	 - Example: MOV A, [B]
+	 - Example: SUB [D], $4
+
+* One-operand instructions:
+	INSTR OPERAND
+	 - Example: INC A
+	 - Example: PUSH B
+	 - Example: NOT [D]
+
+* Zero-operand instructions:
+	INSTR
+	 - Example: HLT
+	 - Example: NOP
+	 - Example: RET
+
+== ADDRESSING PREFIXES ==
+Prefixes modify addressing or operand size.
+Can be explicit or implicit depending on assembler implementations.
+Prefixes fully explained in NAN-ISA.txt
+
+ REX - Register size extention
+ AEX - Address mode extention
+ OEX - Operand size extention
+
+== LABELS AND COMMENTS ==
+Labels end with ":" and start with any letter
+  label_name:
+Comments start with ";"
+
+== FLAG NOTES ==
+Arithmetic/Logic ops update Z, C, N, O as mentioned above.
+MOV, PUSH, POP, LEA and control ops do not modify ops.
+
+== CONTROL FLOW ==
+All conditionals accept either absolute or relative label targets.
+JZ and JNZ are aliases for JE and JNE
+
+== ASSEMBLER NOTES ==
+* Operand order is consistent: INSTR first, SRC second.
+* Immediates cannot be a destination operand.
+* AEX prefix enables additional addressing forms.
+* Encoding follows opcode -> modrm -> sib -> disp -> imm format when required. these operands may be removed if unnesecary for instruction.
+
+=== ENCODING EXAMPLES ===
+Example ADD A, [B + $2]
+	  OPC
+Encoding: 0x01 

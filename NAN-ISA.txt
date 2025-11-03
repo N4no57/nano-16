@@ -1,0 +1,142 @@
+===========================
+=         NAN-ISA         =
+===========================
+
+=== OVERVIEW ===
+* 16 MiB Banked Memory (~64KB pages)(24-bit address space)
+* words size 16 bits
+* variable length instruction encoding with prefixes and extensions
+* encoding summary:
+	[Prefixes...] [Opcode Byte(s)] [modR/M?] [SIB?] [Displacement?] [Immediate?]
+
+	| Field        | Size (bytes) | Description                       |
+	| Prefixes     | 0-3          | Optional (REX, AEX, OEX)          |
+	| Opcode       | 1-2          | Base or extended                  |
+	| modR/M       | 0-1          | Operand Addressing                |
+	| SIB          | 0-1          | Scale/Base/Index                  |
+	| Displacement | 0-2          | signed 8/16-bit                   |
+	| Immediate    | 0-2          | 8/16-bit                          |
+	| Bank ovrd    | 0-1          | 8-bit value to override bank reg  |
+
+=== REGISTERS ===
+A   (0): GP reg
+B   (1): GP reg
+C   (2): GP reg 
+D   (3): GP reg
+SI  (4): GP reg/index reg
+DI  (5): GP reg/index reg
+
+BR (11): Bank reg
+F  (12): Flags reg
+	Carry - set on unsigned overflow
+	Zero  - set when result == 0
+	Overflow - set on signed overflow
+	Negative - copy of MSB
+
+BP (13): Base pointer
+SP (14): Stack pointer
+IP (15): Instruction pointer (24-bit)
+
+=== ABI ===
+SI: arg 1
+DI: arg 2
+D : arg 3
+C : arg 4
+anymore args expected in the stack
+
+A : ret reg
+
+=== INSTRUCTION FORMAT ===
+
+== BASE OPCODE ==
+
+| Bit | Name | Function                                                           |
+| 7   | EXT  | Opcode Extension                                                   |
+| 6   | PFX  | Prefix indicator                                                   |
+| 5   | DIR  | Directionality. src is R/M and dest is REG when 0, reversed when 1 |
+| 4-3 | CLS  | Instruction Class                                                  |
+| 2-0 | OPC  | Base operation                                                     |
+
+== PREFIX BYTES ==
+
+REX (Register EXtend) prefix
+
+0100 MRXB
+
+M = extension to R/M reg field in modR/M
+R = extension to reg field in modR/M
+X = extension to index reg field
+B = extension to base reg field
+
+effectively specified reg fields are 4 bit with this prefix
+
+AEX (Address EXtend) prefix
+
+0101 XXXM
+
+X = reserved for future expantion/unused
+M = extend mode field in modR/M, effectively the 2 bit mode field is 3 bits
+
+OEX (Operand Extend) prefix
+
+0110 XXXW
+
+X = reserved for future expantion/unused
+W = extend width to 16-bit operands when 1
+
+default is 8-bit operands with or without this prefix
+
+=== OPERAND ENCODING ===
+
+modR/M
+
+| Bit | Name | Function         |
+| 7-6 | MODE | Addressing Mode  |
+| 5-3 | REG  | Src/Dest reg     |
+| 2-0 | R/M  | Src/Dest reg/mem |
+
+Mode:	00 - R/M access (reg indirect)
+	01 - Absolute
+	10 - R/M ± 8/16-bit displacement
+	11 - reg to reg
+
+With AEX prefix
+Mode:	00 - SIB addressing
+	01 - Immediate
+	10 - SIB ± 8/16-bit displacement
+	11 - Reserved
+
+SIB
+
+| Bit | Name  | Function         |
+| 7-6 | SCALE | Indexing scale   |
+| 5-3 | IDX   | Index register   |
+| 2-0 | BASE  | Base Register    |
+
+Scale:	00 - 1 byte
+	01 - 2 bytes
+	10 - 4 bytes
+	11 - 8 bytes
+
+Displacement and Immediate
+
+just an 8/16 bit value
+size expressed via OEX prefix
+
+Bank Overide
+8-bit value to overide bank value
+
+=== INSTRUCTION CLASSES ===
+
+CLASS 00: ALU
+CLASS 01: MEMORY
+CLASS 10: BRANCH
+CLASS 11: SYSTEM
+
+== VALID MODES ==
+
+CLASS 00: reg, reg-indirect, reg+disp, Absolute
+CLASS 01: reg, reg-indirect, reg+disp, SIB, SIB+disp, Absolute, Immediate
+CLASS 10: Absolute, IP-relative
+CLASS 11: reserved for control instructions - interrupts, I/O ports, halting, etc.
+
