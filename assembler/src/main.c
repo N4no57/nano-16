@@ -13,6 +13,10 @@ int main(int argc, char **argv) {
 
     FILE *f = fopen(filename, "r");
 
+    if (f == NULL) {
+        printf("Error opening file %s\n", filename);
+    }
+
     fseek(f, 0, SEEK_END);
 
     long size = ftell(f);
