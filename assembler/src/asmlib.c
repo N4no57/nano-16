@@ -9,7 +9,7 @@ char *mnemonics[] = {
     "PUSH", "POP", "INB", "OUTB", "LEA", "JMP", "JZ", "JNZ",
     "JE", "JNE", // pseudo instruction
     "JC", "JNC", "CALL", "RET", "JA", "JAE", "JB", "JBE",
-    "JG", "JGE", "JL", "LE", "NOP", "HLT"
+    "JG", "JGE", "JL", "JLE", "NOP", "HLT"
 };
 
 char *registers[] = {
