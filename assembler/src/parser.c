@@ -2,8 +2,105 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #define STATEMENT_LIST_BASE_CAPACITY 20
+
+const char* opcode_to_string(enum opcode opc) {
+    switch (opc) {
+        case ADD: return "ADD"; case SUB: return "SUB"; case AND: return "AND";
+        case OR: return "OR"; case XOR: return "XOR"; case CMP: return "CMP";
+        case TEST: return "TEST"; case SHL: return "SHL"; case SHR: return "SHR";
+        case ADC: return "ADC"; case INC: return "INC"; case DEC: return "DEC";
+        case MUL: return "MUL"; case DIV: return "DIV"; case NOT: return "NOT";
+        case MOV: return "MOV"; case PUSH: return "PUSH"; case POP: return "POP";
+        case INB: return "INB"; case OUTB: return "OUTB"; case LEA: return "LEA";
+        case JMP: return "JMP"; case JZ: return "JZ"; case JNZ: return "JNZ";
+        case JE: return "JE"; case JNE: return "JNE"; case JC: return "JC";
+        case JNC: return "JNC"; case CALL: return "CALL"; case RET: return "RET";
+        case JA: return "JA"; case JAE: return "JAE"; case JB: return "JB";
+        case JBE: return "JBE"; case JG: return "JG"; case JGE: return "JGE";
+        case JL: return "JL"; case JLE: return "JLE"; case NOP: return "NOP";
+        case HLT: return "HLT";
+        default: return "UNKNOWN_OPCODE";
+    }
+}
+
+const char* reg_to_string(enum registers r) {
+    switch (r) {
+        case A: return "A"; case B: return "B"; case C: return "C"; case D: return "D";
+        case SI: return "SI"; case DI: return "DI"; case BP: return "BP";
+        case SP: return "SP"; case IP: return "IP";
+        default: return "UNKNOWN_REG";
+    }
+}
+
+void print_operand(struct operand *op) {
+    switch (op->type) {
+        case OPERAND_NONE:
+            printf("NONE");
+        break;
+        case OPERAND_IMM:
+            printf("IMM:%u", op->imm);
+        break;
+        case OPERAND_ABS:
+            printf("ABS:%u", op->imm);
+        break;
+        case OPERAND_DISP:
+            printf("DISP:%d", op->disp);
+        break;
+        case OPERAND_REG:
+            printf("REG:%s", reg_to_string(op->reg));
+        break;
+        case OPERAND_RM:
+            printf("RM:%s", reg_to_string(op->reg));
+        break;
+        case OPERAND_MODRM:
+            printf("ModR/M(mod=%u reg=%s rm=%s)", op->modrm.mod, reg_to_string(op->modrm.reg), reg_to_string(op->modrm.rm));
+        break;
+        case OPERAND_SIB:
+            printf("SIB(scale=%u idx=%s base=%s)", op->sib.mod, reg_to_string(op->sib.idx), reg_to_string(op->sib.base));
+        break;
+        default:
+            printf("UNKNOWN_OPERAND");
+    }
+}
+
+void print_instruction(struct instruction *ins) {
+    printf("Instruction: mnemonic=%s, opc=%d, operands=%d\n", opcode_to_string(ins->opc),  ins->opc, ins->operands);
+
+    for (int i = 0; i < ins->operands; i++) {
+        printf("  Operand %d: ", i);
+        print_operand(&ins->oprs[i]);
+        printf("\n");
+    }
+}
+
+void print_symbol(struct symbol *sym) {
+    printf("Symbol: name=%s, value=%ld, type=%d, defined=%d\n",
+           sym->name, sym->value, sym->type, sym->defined);
+}
+
+void print_directive(struct directive *dir) {
+    printf("Directive: name=%s\n", dir->name);
+    // You could expand args if needed
+}
+
+void print_statement(struct statement *stmt) {
+    switch (stmt->type) {
+        case ST_INSTRUCTION:
+            print_instruction(&stmt->instruction);
+        break;
+        case ST_SYMBOL:
+            print_symbol(&stmt->symbol);
+        break;
+        case ST_DIRECTIVE:
+            print_directive(&stmt->directive);
+        break;
+        default:
+            printf("Unknown statement type\n");
+    }
+}
 
 enum opcode matchOpcode(const char *mnemonic) {
     return getmnemonic(mnemonic);
