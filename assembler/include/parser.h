@@ -3,7 +3,7 @@
 
 #define MAX_OPCODE_LEN 2
 #define MAX_PREFIX 3
-#define MAX_OPERANDS 4 * 2 // double the number for any extra stuff before being shortened to true operands
+#define MAX_OPERANDS 5 * 2 // double the number for any extra stuff before being shortened to true operands
 
 #include <stddef.h>
 
@@ -17,7 +17,7 @@ enum opcode {
     POP, INB, OUTB, LEA, JMP, JZ, JNZ,
     JE, JNE, // pseudo instruction
     JC, JNC, CALL, RET, JA, JAE, JB, JBE,
-    JG, JGE, JL, LE, NOP, HLT
+    JG, JGE, JL, JLE, NOP, HLT
 };
 
 enum registers {
