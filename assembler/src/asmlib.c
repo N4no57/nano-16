@@ -13,15 +13,23 @@ char *mnemonics[] = {
 };
 
 char *registers[] = {
-    "A",
-    "B",
-    "C",
-    "D",
-    "SI",
-    "DI",
-    "BP",
-    "SP",
-    "IP"
+    "A", // 0
+    "B", // 1
+    "C", // 2
+    "D", // 3
+    "SI", // 4
+    "DI", // 5
+    "NAN", // 6
+    "NAN", // 7
+
+    "NAN", // 8
+    "NAN", // 9
+    "NAN", // 10
+    "NAN", // 11
+    "NAN", // 12
+    "BP", // 13
+    "SP", // 14
+    "IP" // 15
 };
 
 char *sizeSpecifiers[] = {
