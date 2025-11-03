@@ -15,8 +15,8 @@ start:
     SUB D, [0x3000]         ; absolute memory
     INC A                   ; unary extended
     DEC B
-    MUL C
-    DIV D
+    MUL C, A
+    DIV D, B
     NOT [DI+2]              ; unary, memory + displacement
 
     AND A, B
