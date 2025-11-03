@@ -60,7 +60,7 @@ void parse_disp(const token_list *tokens, token *current_tok, size_t *tok_idx, s
     oprd.type = OPERAND_DISP;
     char sign = current_tok->type == TT_PLUS ? '+' : '-';
     consume(tokens, tok_idx, current_tok); // consume "+"/"-"
-    oprd.disp = sign == '+' ? (int)current_tok->value : (int)current_tok->value * -1;
+    oprd.disp = sign == '+' ? *(int *)current_tok->value : *(int *)current_tok->value * -1;
     oprd.size = oprd.disp > 127 || oprd.disp < -128 ? 2 : 1; // incomplete, be fixed in assembler revision
     inst->oprs[inst->operands++] = oprd;
     consume(tokens, tok_idx, current_tok); // consume disp
