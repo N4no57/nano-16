@@ -49,7 +49,7 @@ int ismnemonic(const char *string) {
     char tmp[MAXTEMPSIZE];
     strcpy(tmp, string);
     toUpper(tmp);
-    for (int i = 0; i < 38; i++) {
+    for (int i = 0; i < sizeof(mnemonics) / sizeof(mnemonics[0]); i++) {
         if (strcmp(tmp, mnemonics[i]) == 0) {
             return 1;
         }
