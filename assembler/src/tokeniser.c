@@ -145,12 +145,17 @@ token_list *tokenise(char *filename, const char *string) {
     init_token_list(tokens);
 
     while (string[*i] != '\0') {
+        token t;
+        t.value = NULL;
         if (isspace(string[*i])) {
+            if (string[*i] == '\n') {
+                t.type = TT_NEWLINE;
+                t.pos = current_pos;
+                push_token(tokens, t);
+            }
             advance(&current_pos, string);
             continue;
         }
-        token t;
-        t.value = NULL;
 
         if (string[*i] == ';') {
             while (string[*i] != '\n') {

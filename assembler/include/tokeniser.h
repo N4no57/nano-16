@@ -19,6 +19,7 @@ enum token_type {
     TT_COMMA,
     TT_SEMICOLON,
     TT_COLON,
+    TT_NEWLINE,
     TT_SIZESPEC,
     TT_EOF
 };
