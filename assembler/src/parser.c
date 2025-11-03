@@ -329,5 +329,10 @@ struct statement_list parse(const token_list *tokens) {
         consume(tokens, &tok_idx, &current_tok);
     }
 
+    for (int i = 0; i < result.count; i++) {
+        printf("i = %d:\n", i);
+        print_statement(&result.statements[i]);
+    }
+
     return result;
 }
