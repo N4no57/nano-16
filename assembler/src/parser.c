@@ -171,6 +171,9 @@ void parse_mem_op(const token_list *tokens, token *current_tok, size_t *tok_idx,
     if (current_tok->type == TT_IDENTIFIER || current_tok->type == TT_IMMEDIATE) {
         parse_value(tokens, current_tok, tok_idx, inst);
 
+        struct operand *abs_opr = &inst->oprs[inst->operands-1];
+        abs_opr->type = OPERAND_ABS;
+
         if (current_tok->type != TT_RBRACKET) {
             print_error(&current_tok->pos, "Expected \"]\" after absolute");
             exit(EXIT_FAILURE);
@@ -244,6 +247,7 @@ void parse_operands(const token_list *tokens, token *current_tok, size_t *tok_id
     do {
         struct operand oprd;
         if (current_tok->type == TT_COMMA) consume(tokens, tok_idx, current_tok);
+        if (current_tok->type == TT_NEWLINE) return;
 
         if (current_tok->type == TT_REGISTER) {
             oprd.type = OPERAND_REG;
@@ -274,6 +278,73 @@ void parse_operands(const token_list *tokens, token *current_tok, size_t *tok_id
     } while (current_tok->type == TT_COMMA);
 }
 
+void first_pass(const token_list *tokens, token *current_tok, size_t *tok_idx, struct statement_list *result) {
+    while (current_tok->type != TT_EOF) {
+        struct statement stmnt;
+
+        if (current_tok->type == TT_MNEMONIC) {
+            struct instruction inst;
+            inst.opc = matchOpcode(current_tok->value);
+            inst.pos = current_tok->pos;
+            inst.prefix_count = 0;
+            inst.operands = 0;
+
+            // token mnemonic = current_tok;
+            consume(tokens, tok_idx, current_tok);
+
+            parse_operands(tokens, current_tok, tok_idx, &inst);
+
+            stmnt.type = ST_INSTRUCTION;
+            stmnt.instruction = inst;
+            push_statement(result, &stmnt);
+            continue;
+        }
+
+        if (current_tok->type == TT_IDENTIFIER) {
+            struct symbol sym;
+            sym.name = strdup(current_tok->value);
+            sym.pos = current_tok->pos;
+
+            consume(tokens, tok_idx, current_tok);
+
+            if (current_tok->type != TT_COLON) {
+                print_error(&current_tok->pos, "expected \":\" after identifier\n");
+                exit(EXIT_FAILURE);
+            }
+
+            consume(tokens, tok_idx, current_tok);
+            sym.defined = 1;
+            sym.type = SYM_LABEL;
+
+            stmnt.type = ST_SYMBOL;
+            stmnt.symbol = sym;
+
+            push_statement(result, &stmnt);
+
+            continue;
+        }
+
+        consume(tokens, tok_idx, current_tok);
+    }
+}
+
+void merge_to_modrm(struct instruction *inst) {
+    for (u8 i = 0; i < inst->operands; ++i) {
+        if (inst->oprs[i].type == OPERAND_REG) {
+            
+        }
+    }
+}
+
+void second_pass(const struct statement_list *result) {
+    for (int i = 0; i < result->count; i++) {
+        struct statement *stmnt = &result->statements[i];
+        if (stmnt->type == ST_INSTRUCTION) {
+            merge_to_modrm(&stmnt->instruction);
+        }
+    }
+}
+
 struct statement_list parse(const token_list *tokens) {
     struct statement_list result;
     init_statement_list(&result);
@@ -281,58 +352,14 @@ struct statement_list parse(const token_list *tokens) {
     size_t tok_idx = 0;
     token current_tok = tokens->data[tok_idx];
 
-    while (current_tok.type != TT_EOF) {
-        struct statement stmnt;
-
-        if (current_tok.type == TT_MNEMONIC) {
-            struct instruction inst;
-            inst.opc = matchOpcode(current_tok.value);
-            inst.pos = current_tok.pos;
-            inst.prefix_count = 0;
-            inst.operands = 0;
-
-            // token mnemonic = current_tok;
-            consume(tokens, &tok_idx, &current_tok);
-
-            parse_operands(tokens, &current_tok, &tok_idx, &inst);
-
-            stmnt.type = ST_INSTRUCTION;
-            stmnt.instruction = inst;
-            push_statement(&result, &stmnt);
-            continue;
-        }
-
-        if (current_tok.type == TT_IDENTIFIER) {
-            struct symbol sym;
-            sym.name = strdup(current_tok.value);
-            sym.pos = current_tok.pos;
-
-            consume(tokens, &tok_idx, &current_tok);
-
-            if (current_tok.type != TT_COLON) {
-                print_error(&current_tok.pos, "expected \":\" after identifier\n");
-                exit(EXIT_FAILURE);
-            }
-
-            consume(tokens, &tok_idx, &current_tok);
-            sym.defined = 1;
-            sym.type = SYM_LABEL;
-
-            stmnt.type = ST_SYMBOL;
-            stmnt.symbol = sym;
-
-            push_statement(&result, &stmnt);
-
-            continue;
-        }
-
-        consume(tokens, &tok_idx, &current_tok);
-    }
+    first_pass(tokens, &current_tok, &tok_idx, &result);
 
     for (int i = 0; i < result.count; i++) {
         printf("i = %d:\n", i);
         print_statement(&result.statements[i]);
     }
+
+    second_pass(&result);
 
     return result;
 }
