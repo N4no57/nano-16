@@ -5,6 +5,18 @@
 #include <stdio.h>
 
 #define STATEMENT_LIST_BASE_CAPACITY 20
+// directonality
+#define RM_TO_REG 0
+#define REG_TO_RM 1
+// instruction modes
+#define MOD_RM_IND 0
+#define MOD_ABSOLUTE 1
+#define MOD_RM_DISP 2
+#define MOD_REG_REG 3
+// AEX prefix
+#define MOD_SIB 0
+#define MOD_IMMEDIATE 1
+#define MOD_SIB_DISP 2
 
 const char* opcode_to_string(enum opcode opc) {
     switch (opc) {
@@ -328,10 +340,125 @@ void first_pass(const token_list *tokens, token *current_tok, size_t *tok_idx, s
     }
 }
 
+i32 is_memory(const enum operand_type type) {
+    if (type == OPERAND_RM || type == OPERAND_ABS || type == OPERAND_SIB) {
+        return 1;
+    }
+    return 0;
+}
+
+i8 has_prefix(const i8 prefix, struct instruction *inst) {
+    for (i8 i = 0; i < inst->prefix_count; i++) {
+        if ((inst->prefixes[i] & 0xF0) == prefix) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+i32 calc_mode(const u32 *idx, struct instruction *inst) {
+    // idx is the operand wanted to be indexed that will be used to calculate the mode
+    // the instruction this operation is happening on
+
+    // mode = 00 if rm
+    // mode = 10 if rm ± disp
+
+    // AEX prefix + mode = 00 if SIB
+    // AEX prefix + mode = 01 if immediate
+    // AEX prefix + mode = 10 if SIB ± disp
+
+    if (inst->oprs[*idx].type == OPERAND_RM) {
+        if (*idx+1 < inst->operands && inst->oprs[*idx+1].type == OPERAND_DISP) {
+            return MOD_RM_DISP;
+        }
+        return MOD_RM_IND;
+    }
+
+    if (inst->oprs[*idx].type == OPERAND_SIB) {
+        if (!has_prefix(AEX, inst))
+            inst->prefixes[inst->prefix_count++] = AEX_PREFIX(1);
+        if (*idx+1 < inst->operands && inst->oprs[*idx+1].type == OPERAND_DISP) {
+            return MOD_SIB_DISP;
+        }
+        return MOD_SIB;
+    }
+
+    if (inst->oprs[*idx].type == OPERAND_ABS) {
+        if (!has_prefix(AEX, inst))
+            inst->prefixes[inst->prefix_count++] = AEX_PREFIX(1);
+        return MOD_IMMEDIATE;
+    }
+
+    return -1; // mode not found
+}
+
+/*
+  for each instruction:
+    for each operand:
+        if operand is REG:
+            if both operands are REG:   # simple reg-to-reg
+                ModR/M.mod = 3         # reg-reg mode
+                ModR/M.reg = dest reg
+                ModR/M.rm  = src reg
+            else if one operand is memory:
+                ModR/M.mod = compute_mode(memory)
+                ModR/M.reg = reg operand
+                ModR/M.rm  = memory operand
+                if SIB needed:
+                    fill SIB structure
+        else if operand is MEM:
+            compute ModR/M.mod based on addressing
+            set ModR/M.rm field
+            if addressing requires SIB:
+                fill SIB structure
+            if displacement present:
+                store displacement
+        else if operand is IMM:
+            store immediate value
+    validate operand combination against instruction class rules
+ */
+
+// directionality = 0
+// reg <- rm
+// directionality = 1
+// rm <- reg
+
 void merge_to_modrm(struct instruction *inst) {
-    for (u8 i = 0; i < inst->operands; ++i) {
+    struct operand modrm = {0};
+    modrm.type = OPERAND_MODRM;
+    u32 i = 0;
+    while (i < inst->operands) {
         if (inst->oprs[i].type == OPERAND_REG) {
-            
+            modrm.modrm.directionality = RM_TO_REG;
+            modrm.modrm.reg = inst->oprs[i].reg; // dest
+            i++;
+
+            if (i < inst->operands && inst->oprs[i].type == OPERAND_REG) {
+                modrm.modrm.mod = MOD_REG_REG;
+                modrm.modrm.rm = inst->oprs[i].reg; // src
+            } else if (i < inst->operands && is_memory(inst->oprs[i].type)) {
+                modrm.modrm.mod = calc_mode(&i, inst);
+                modrm.modrm.rm = inst->oprs[i].reg;
+
+                if (has_prefix(AEX, inst)) {
+                    // all modes that are in the AEX prefix do not use rm
+                    modrm.modrm.rm = NONE;
+                }
+            }
+            i++;
+        } else if (is_memory(inst->oprs[i].type)) {
+            // operands may need to be rearranged
+
+            modrm.modrm.directionality = REG_TO_RM;
+            modrm.modrm.mod = calc_mode(&i, inst);
+
+            modrm.modrm.rm = inst->oprs[i].reg;
+
+            if (has_prefix(AEX, inst)) {
+                // all modes that are in the AEX prefix do not use rm
+                modrm.modrm.rm = NONE;
+            }
+            i++;
         }
     }
 }
@@ -355,7 +482,7 @@ struct statement_list parse(const token_list *tokens) {
     first_pass(tokens, &current_tok, &tok_idx, &result);
 
     for (int i = 0; i < result.count; i++) {
-        printf("i = %d:\n", i);
+        // printf("i = %d:\n", i);
         print_statement(&result.statements[i]);
     }
 
