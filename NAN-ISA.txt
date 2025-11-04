@@ -102,9 +102,9 @@ Mode:	00 - R/M access (reg indirect)
 
 With AEX prefix
 Mode:	00 - SIB addressing
-	01 - Immediate
+	01 - Immediate (not to mem)
 	10 - SIB ± 8/16-bit displacement
-	11 - Reserved
+	11 - Immediate (to mem)
 
 SIB
 
