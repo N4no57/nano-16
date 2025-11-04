@@ -5,6 +5,17 @@
 #define MAX_PREFIX 3
 #define MAX_OPERANDS 5 * 2 // double the number for any extra stuff before being shortened to true operands
 
+#define NONE 0
+
+// prefixes
+#define REX 0x40
+#define AEX 0x50
+#define OEX 0x60
+
+#define REX_PREFIX(M, R, X, B) (REX | ((M << 3) & 8) | ((R << 2) & 4) | ((X << 1) & 2) | (B & 1))
+#define AEX_PREFIX(M) (AEX | (M & 1))
+#define OEX_PREFIX(W) (OEX | (W & 1))
+
 #include <stddef.h>
 
 #include "asmlib.h"
@@ -69,14 +80,15 @@ struct operand {
 
         struct  {
             u8 mod;
-            u8 idx;
-            u8 base;
+            enum registers idx;
+            enum registers base;
         } sib; // SIB byte fields
 
         struct {
             u8 mod;
-            u8 reg;
-            u8 rm;
+            u8 directionality;
+            enum registers reg;
+            enum registers rm;
         } modrm; // ModR/M byte fields
     };
 };
