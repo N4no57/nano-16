@@ -418,11 +418,6 @@ i32 calc_mode(const u32 *idx, struct instruction *inst) {
     validate operand combination against instruction class rules
  */
 
-// directionality = 0
-// reg <- rm
-// directionality = 1
-// rm <- reg
-
 void merge_to_modrm(struct instruction *inst) {
     struct operand modrm = {0};
     modrm.type = OPERAND_MODRM;
