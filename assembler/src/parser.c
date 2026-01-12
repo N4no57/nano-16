@@ -18,6 +18,67 @@
 #define MOD_IMMEDIATE 1
 #define MOD_SIB_DISP 2
 
+struct operand_analysis {
+    /* ========= Register side ========= */
+
+    i8  has_reg;                 // any explicit register operand
+    enum registers reg;          // logical REG field (ModR/M.reg)
+    u8  reg_src_index;           // index in inst->oprs[] it came from
+
+
+    /* ========= Memory side ========= */
+
+    i8  has_mem;                 // instruction references memory
+    enum {
+        MEM_NONE,
+        MEM_RM,                  // [base]
+        MEM_SIB,                 // [base + index * scale]
+        MEM_ABS                  // [absolute]
+    } mem_kind;
+
+    enum registers rm;            // base register (ModR/M.rm)
+    u8  rm_src_index;
+
+    /* --- SIB details (if MEM_SIB) --- */
+    i8  has_sib;
+    enum registers sib_base;
+    enum registers sib_index;
+    u8  sib_scale;
+    u8  sib_src_index;
+
+
+    /* ========= Displacement ========= */
+
+    i8  has_disp;
+    i32 disp_value;
+    u8  disp_size;               // 1 or 2 bytes
+    u8  disp_src_index;
+
+
+    /* ========= Immediate ========= */
+
+    i8  has_imm;
+    i64 imm_value;
+    u8  imm_size;
+    u8  imm_src_index;
+    i8  imm_to_mem;              // AEX mode 11 vs 01
+
+
+    /* ========= Derived encoding info ========= */
+
+    u8  mod;                     // final ModR/M.mod value
+    u8  direction;               // REG→RM or RM→REG
+
+    i8  needs_modrm;
+    i8  needs_sib;
+    i8  needs_aex;
+
+    /* ========= Bookkeeping ========= */
+
+    u8  operand_span_start;      // first operand index consumed
+    u8  operand_span_end;        // last operand index consumed
+};
+
 const char* opcode_to_string(enum opcode opc) {
     switch (opc) {
         case ADD: return "ADD"; case SUB: return "SUB"; case AND: return "AND";
