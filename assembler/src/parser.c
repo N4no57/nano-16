@@ -55,6 +55,14 @@ struct operand_analysis {
     u8  disp_src_index;
 
 
+    /* ========= Absolute ========= */
+
+    i8  has_abs;
+    i64 abs_value;
+    u8  abs_size;
+    u8  abs_src_index;
+
+
     /* ========= Immediate ========= */
 
     i8  has_imm;
