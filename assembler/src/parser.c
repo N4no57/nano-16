@@ -489,41 +489,71 @@ void merge_to_modrm(struct instruction *inst) {
             modrm.modrm.reg = inst->oprs[i].reg; // dest
             i++;
 
-            if (i < inst->operands && inst->oprs[i].type == OPERAND_REG) {
-                modrm.modrm.mod = MOD_REG_REG;
-                modrm.modrm.rm = inst->oprs[i].reg; // src
-            } else if (i < inst->operands && is_memory(inst->oprs[i].type)) {
-                modrm.modrm.mod = calc_mode(&i, inst);
-                modrm.modrm.rm = inst->oprs[i].reg;
+struct operand_analysis capture_operands(const struct instruction *inst) {
+    struct operand_analysis result = {0};
 
-                if (has_prefix(AEX, inst)) {
-                    // all modes that are in the AEX prefix do not use rm
-                    modrm.modrm.rm = NONE;
+    for (u8 i = 0; i < inst->operands; i++) {
+        const struct operand op = inst->oprs[i];
+
+        switch (op.type) {
+            case OPERAND_REG:
+                // if this is the first reg then it is the reg field in ModR/M
+                if (!result.has_reg) {
+                    result.has_reg = 1;
+                    result.reg = op.reg;
+                    result.reg_src_index = i;
+                    break;
                 }
-            }
-            i++;
-        } else if (is_memory(inst->oprs[i].type)) {
-            // operands may need to be rearranged
-
-            modrm.modrm.directionality = REG_TO_RM;
-            modrm.modrm.mod = calc_mode(&i, inst);
-
-            modrm.modrm.rm = inst->oprs[i].reg;
-
-            if (has_prefix(AEX, inst)) {
-                // all modes that are in the AEX prefix do not use rm
-                modrm.modrm.rm = NONE;
-            }
-            i++;
+                // if this is the 2nd reg then it is the rm field in ModR/M
+                result.rm = op.reg;
+                result.rm_src_index = i;
+                break;
+            case OPERAND_RM:
+                result.rm = op.reg;
+                result.rm_src_index = i;
+                break;
+            case OPERAND_SIB:
+                result.has_sib = 1;
+                result.sib_base = op.sib.base;
+                result.sib_index = op.sib.idx;
+                result.sib_scale = op.sib.mod;
+                result.sib_src_index = i;
+                break;
+            case OPERAND_DISP:
+                result.has_disp = 1;
+                result.disp_value = op.disp;
+                result.disp_src_index = i;
+                result.disp_size = 2;
+                if (op.disp <= 127 || op.disp >= -128) result.disp_size = 1;
+                break;
+            case OPERAND_ABS:
+                result.has_abs = 1;
+                result.abs_value = op.imm;
+                result.abs_src_index = i;
+                result.abs_size = 2;
+                if (op.imm <= 127 || op.imm >= -128) result.abs_size = 1;
+                break;
+            case OPERAND_IMM:
+                result.has_imm = 1;
+                result.imm_value = op.imm;
+                result.imm_src_index = i;
+                result.imm_size = 2;
+                if (op.imm <= 127 || op.imm >= -128) result.imm_size = 1;
+                break;
+            default:
+                perror("operand analysis error");
+                exit(EXIT_FAILURE);
         }
     }
+
+    return result;
 }
 
 void second_pass(const struct statement_list *result) {
     for (int i = 0; i < result->count; i++) {
-        struct statement *stmnt = &result->statements[i];
-        if (stmnt->type == ST_INSTRUCTION) {
-            merge_to_modrm(&stmnt->instruction);
+        const struct statement *stmnt = &result->statements[i];
+        if (stmnt->type == ST_INSTRUCTION) { // TODO
+            struct operand_analysis analysis = capture_operands(stmnt);
         }
     }
 }
