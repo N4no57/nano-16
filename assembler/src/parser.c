@@ -1,5 +1,6 @@
 #include "../include/parser.h"
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -409,8 +410,8 @@ void first_pass(const token_list *tokens, token *current_tok, size_t *tok_idx, s
     }
 }
 
-i32 is_memory(const enum operand_type type) {
-    if (type == OPERAND_RM || type == OPERAND_ABS || type == OPERAND_SIB) {
+i8 has_memory(const struct operand_analysis op) {
+    if (op.has_abs == 1 || op.has_disp == 1 || op.has_sib == 1) {
         return 1;
     }
     return 0;
@@ -425,77 +426,32 @@ i8 has_prefix(const i8 prefix, struct instruction *inst) {
     return 0;
 }
 
-i32 calc_mode(const u32 *idx, struct instruction *inst) {
+i32 calc_mode(const struct operand_analysis *op) {
     // idx is the operand wanted to be indexed that will be used to calculate the mode
     // the instruction this operation is happening on
 
     // mode = 00 if rm
-    // mode = 10 if rm ± disp
+    // mode = 01 if Absolute
+    // mode = 10 if R/M ± 8/16-bit displacement
+    // mode = 11 if reg to reg
 
     // AEX prefix + mode = 00 if SIB
-    // AEX prefix + mode = 01 if immediate
+    // AEX prefix + mode = 01 if immediate (not to mem)
     // AEX prefix + mode = 10 if SIB ± disp
+    // AEX prefix + mode = 11 if Immediate (to mem)
 
-    if (inst->oprs[*idx].type == OPERAND_RM) {
-        if (*idx+1 < inst->operands && inst->oprs[*idx+1].type == OPERAND_DISP) {
-            return MOD_RM_DISP;
-        }
-        return MOD_RM_IND;
+    // TODO
+    if (op->has_abs == 1) {
+        
     }
-
-    if (inst->oprs[*idx].type == OPERAND_SIB) {
-        if (!has_prefix(AEX, inst))
-            inst->prefixes[inst->prefix_count++] = AEX_PREFIX(1);
-        if (*idx+1 < inst->operands && inst->oprs[*idx+1].type == OPERAND_DISP) {
-            return MOD_SIB_DISP;
-        }
-        return MOD_SIB;
-    }
-
-    if (inst->oprs[*idx].type == OPERAND_ABS) {
-        if (!has_prefix(AEX, inst))
-            inst->prefixes[inst->prefix_count++] = AEX_PREFIX(1);
-        return MOD_IMMEDIATE;
-    }
-
-    return -1; // mode not found
 }
 
-/*
-  for each instruction:
-    for each operand:
-        if operand is REG:
-            if both operands are REG:   # simple reg-to-reg
-                ModR/M.mod = 3         # reg-reg mode
-                ModR/M.reg = dest reg
-                ModR/M.rm  = src reg
-            else if one operand is memory:
-                ModR/M.mod = compute_mode(memory)
-                ModR/M.reg = reg operand
-                ModR/M.rm  = memory operand
-                if SIB needed:
-                    fill SIB structure
-        else if operand is MEM:
-            compute ModR/M.mod based on addressing
-            set ModR/M.rm field
-            if addressing requires SIB:
-                fill SIB structure
-            if displacement present:
-                store displacement
-        else if operand is IMM:
-            store immediate value
-    validate operand combination against instruction class rules
- */
+i32 determine_directionality(const struct operand_analysis *analysis) {
+   // TODO
+    if (analysis->has_reg && analysis->has_mem) {
 
-void merge_to_modrm(struct instruction *inst) {
-    struct operand modrm = {0};
-    modrm.type = OPERAND_MODRM;
-    u32 i = 0;
-    while (i < inst->operands) {
-        if (inst->oprs[i].type == OPERAND_REG) {
-            modrm.modrm.directionality = RM_TO_REG;
-            modrm.modrm.reg = inst->oprs[i].reg; // dest
-            i++;
+    }
+}
 
 struct operand_analysis capture_operands(const struct instruction *inst) {
     struct operand_analysis result = {0};
@@ -515,8 +471,15 @@ struct operand_analysis capture_operands(const struct instruction *inst) {
                 // if this is the 2nd reg then it is the rm field in ModR/M
                 result.rm = op.reg;
                 result.rm_src_index = i;
+                // mark this as reg->reg
+                result.mod = MOD_REG_REG;
+                result.direction = RM_TO_REG;
                 break;
             case OPERAND_RM:
+                // is only RM if not SIB or ABS
+                result.has_mem = 1;
+                result.mem_kind = MEM_RM;
+
                 result.rm = op.reg;
                 result.rm_src_index = i;
                 break;
