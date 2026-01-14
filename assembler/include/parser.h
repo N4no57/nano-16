@@ -33,7 +33,7 @@ enum opcode {
 
 enum registers {
     A = 0, B = 1, C = 2, D = 3, SI = 4, DI = 5,
-    BP = 13, SP = 14, IP = 15
+    BP = 13, SP = 14, IP = 15, NIL = 16
 };
 
 enum sizeSpec {
