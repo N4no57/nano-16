@@ -223,7 +223,7 @@ void consume(const token_list *tokens, size_t *idx, token *tok) {
 }
 
 void parse_value(const token_list *tokens, token *current_tok, size_t *tok_idx, struct instruction *inst) {
-    struct operand oprd;
+    struct operand oprd = {0};
     if (current_tok->type == TT_IDENTIFIER) { // identifier
         // dunno how to handle this rn
     } else { // actual number
@@ -236,7 +236,7 @@ void parse_value(const token_list *tokens, token *current_tok, size_t *tok_idx, 
 }
 
 void parse_disp(const token_list *tokens, token *current_tok, size_t *tok_idx, struct instruction *inst) {
-    struct operand oprd;
+    struct operand oprd = {0};
     oprd.type = OPERAND_DISP;
     char sign = current_tok->type == TT_PLUS ? '+' : '-';
     consume(tokens, tok_idx, current_tok); // consume "+"/"-"
@@ -247,7 +247,7 @@ void parse_disp(const token_list *tokens, token *current_tok, size_t *tok_idx, s
 }
 
 void parse_mem_op(const token_list *tokens, token *current_tok, size_t *tok_idx, struct instruction *inst) {
-    struct operand oprd;
+    struct operand oprd = {0};
     consume(tokens, tok_idx, current_tok); // consume "["
 
     // ABS
