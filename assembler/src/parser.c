@@ -557,6 +557,15 @@ struct operand_analysis capture_operands(const struct instruction *inst) {
         }
     }
 
+    result.mem_kind = (u8)has_memory(result);
+    if (result.mem_kind != MEM_NONE) {
+        result.has_mem = 1;
+    }
+
+    result.direction = determine_directionality(&result);
+
+    result.mod = calc_mode(&result);
+
     return result;
 }
 
