@@ -444,20 +444,43 @@ i32 calc_mode(const struct operand_analysis *op) {
     // mode = 10 if R/M ± 8/16-bit displacement
     // mode = 11 if reg to reg
 
+    if (!op->has_mem) {
+        if (op->has_imm) {
+            return MOD_IMM_REG;
+        }
+        return MOD_REG_REG;
+    }
+
+    if (op->mem_kind == MEM_RM) {
+        if (op->has_disp) {
+            return MOD_RM_DISP;
+        }
+        return MOD_RM_IND;
+    }
+
+    if (op->mem_kind == MEM_ABS) {
+        return MOD_ABSOLUTE;
+    }
+
     // AEX prefix + mode = 00 if SIB
     // AEX prefix + mode = 01 if immediate (not to mem)
     // AEX prefix + mode = 10 if SIB ± disp
     // AEX prefix + mode = 11 if Immediate (to mem)
 
-    // TODO
-    if (op->has_abs == 1) {
-        
+    if (op->mem_kind == MEM_SIB) {
+        if (op->has_disp) {
+            return MOD_SIB_DISP;
+        }
+        return MOD_SIB;
     }
-}
 
-i32 determine_directionality(const struct operand_analysis *analysis) {
-   // TODO
-    if (analysis->has_reg && analysis->has_mem) {
+    if (op->has_imm) {
+        return MOD_IMM_REG;
+    }
+
+    perror("Unfindable mode");
+    exit(EXIT_FAILURE);
+}
 
     }
 }
