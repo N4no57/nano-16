@@ -81,7 +81,9 @@ struct operand_analysis {
 
     i8  needs_modrm;
     i8  needs_sib;
+    i8  needs_rex;
     i8  needs_aex;
+    i8  needs_oex;
 
     /* ========= Bookkeeping ========= */
 
