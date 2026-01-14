@@ -569,6 +569,49 @@ struct operand_analysis capture_operands(const struct instruction *inst) {
     return result;
 }
 
+void determine_prefixes(struct operand_analysis *op) {
+    // REX prefix
+    // M = extension to R/M reg field in modR/M
+    // R = extension to reg field in modR/M
+    // X = extension to index reg field
+    // B = extension to base reg field
+
+    u8 rex_pre = REX;
+    u8 aex_pre = AEX;
+    u8 oex_pre = OEX;
+
+    if (op->reg >= 8 && op->reg != NIL) rex_pre |= REX_PREFIX(0, 1, 0, 0);
+    if (op->rm >= 8 && op->rm != NIL) rex_pre |= REX_PREFIX(1, 0, 0, 0);
+    if (op->mem_kind == MEM_SIB) {
+        if (op->sib_index >= 8 && op->sib_index != NIL) rex_pre |= REX_PREFIX(0, 0, 1, 0);
+        if (op->sib_base >= 8 && op->sib_base != NIL) rex_pre |= REX_PREFIX(0, 0, 0, 1);
+    }
+
+    // AEX prefix
+    // X = reserved for future expantion/unused
+    // M = extend mode field in modR/M, effectively the 2 bit mode field is 3 bits
+
+    if (op->has_imm || op->mem_kind == MEM_SIB) aex_pre |= AEX_PREFIX(1);
+
+    // OEX prefix
+    // X = reserved for future expantion/unused
+    // W = extend width to 16-bit operands when
+
+    if (op->has_imm || op->has_disp) {
+        if (op->imm_size == 2 || op->disp_size == 2) oex_pre |= OEX_PREFIX(1);
+    }
+
+    if (rex_pre > REX) {
+        op->needs_rex = (i8)rex_pre;
+    }
+    if (aex_pre > AEX) {
+        op->needs_aex = (i8)aex_pre;
+    }
+    if (oex_pre > OEX) {
+        op->needs_oex = (i8)oex_pre;
+    }
+}
+
 void second_pass(const struct statement_list *result) {
     for (int i = 0; i < result->count; i++) {
         const struct statement *stmnt = &result->statements[i];
