@@ -542,14 +542,14 @@ struct operand_analysis capture_operands(const struct instruction *inst) {
                 result.abs_value = op.imm;
                 result.abs_src_index = i;
                 result.abs_size = 2;
-                if (op.imm <= 127 || op.imm >= -128) result.abs_size = 1;
+                if (op.imm >= 256) result.abs_size = 1;
                 break;
             case OPERAND_IMM:
                 result.has_imm = 1;
                 result.imm_value = op.imm;
                 result.imm_src_index = i;
                 result.imm_size = 2;
-                if (op.imm <= 127 || op.imm >= -128) result.imm_size = 1;
+                if (op.imm >= 256) result.imm_size = 1;
                 break;
             default:
                 perror("operand analysis error");
