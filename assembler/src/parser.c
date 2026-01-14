@@ -482,11 +482,19 @@ i32 calc_mode(const struct operand_analysis *op) {
     exit(EXIT_FAILURE);
 }
 
+u8 determine_directionality(const struct operand_analysis *op) {
+    if (op->has_mem) {
+        if (op->reg_src_index == 0) {
+            return RM_TO_REG;
+        }
+        return REG_TO_RM;
     }
+    return RM_TO_REG;
 }
 
 struct operand_analysis capture_operands(const struct instruction *inst) {
     struct operand_analysis result = {0};
+    result.rm = NIL;
 
     for (u8 i = 0; i < inst->operands; i++) {
         const struct operand op = inst->oprs[i];
