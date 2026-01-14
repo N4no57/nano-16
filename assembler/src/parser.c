@@ -330,7 +330,7 @@ void parse_mem_op(const token_list *tokens, token *current_tok, size_t *tok_idx,
 
 void parse_operands(const token_list *tokens, token *current_tok, size_t *tok_idx, struct instruction *inst) {
     do {
-        struct operand oprd;
+        struct operand oprd = {0};
         if (current_tok->type == TT_COMMA) consume(tokens, tok_idx, current_tok);
         if (current_tok->type == TT_NEWLINE) return;
 
@@ -414,8 +414,14 @@ void first_pass(const token_list *tokens, token *current_tok, size_t *tok_idx, s
 }
 
 i8 has_memory(const struct operand_analysis op) {
-    if (op.has_abs == 1 || op.has_disp == 1 || op.has_sib == 1) {
+    if (op.rm != NIL) {
         return 1;
+    }
+    if (op.has_sib == 1) {
+        return 2;
+    }
+    if (op.has_abs == 1) {
+        return 3;
     }
     return 0;
 }
