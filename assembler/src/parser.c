@@ -16,8 +16,9 @@
 #define MOD_REG_REG 3
 // AEX prefix
 #define MOD_SIB 0
-#define MOD_IMMEDIATE 1
+#define MOD_IMM_REG 1
 #define MOD_SIB_DISP 2
+#define MOD_IMM_MEM 1
 
 struct operand_analysis {
     /* ========= Register side ========= */
