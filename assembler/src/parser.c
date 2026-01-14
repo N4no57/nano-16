@@ -615,8 +615,10 @@ void determine_prefixes(struct operand_analysis *op) {
 void second_pass(const struct statement_list *result) {
     for (int i = 0; i < result->count; i++) {
         const struct statement *stmnt = &result->statements[i];
-        if (stmnt->type == ST_INSTRUCTION) { // TODO
-            struct operand_analysis analysis = capture_operands(stmnt);
+        if (stmnt->type == ST_INSTRUCTION) { // TODO ING
+            struct operand_analysis analysis = capture_operands(&stmnt->instruction);
+            determine_prefixes(&analysis);
+
         }
     }
 }
