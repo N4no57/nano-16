@@ -612,13 +612,58 @@ void determine_prefixes(struct operand_analysis *op) {
     }
 }
 
+void rearrange_instruction(struct instruction *inst, struct operand_analysis *op) {
+    inst->operands = 0;
+    for (int i = 0; i < 10; i++) {
+        memset(&inst->oprs[i], 0, sizeof(struct operand));
+    }
+
+    if (!op->has_mem) {
+        // either:
+        // inst reg, reg
+        // inst reg, imm
+        struct operand modrm = {0};
+
+        modrm.type = OPERAND_MODRM;
+        modrm.modrm.mod = op->mod;
+        modrm.modrm.directionality = op->direction;
+        modrm.modrm.reg = op->reg;
+
+        inst->operands = 1;
+
+        if (op->has_imm) {
+            struct operand imm = {0};
+            imm.type = OPERAND_IMM;
+            imm.imm = op->imm_value;
+
+            inst->operands++;
+            inst->oprs[0] = modrm;
+            inst->oprs[1] = imm;
+            return;
+        }
+
+        modrm.modrm.rm = op->rm;
+        inst->oprs[0] = modrm;
+        return;
+    }
+
+    if (op->mem_kind == MEM_RM) {
+        struct operand modrm = {0};
+
+        modrm.type = OPERAND_MODRM;
+        modrm.modrm.mod = op->mod;
+        modrm.modrm.directionality = op->direction;
+        modrm.modrm.reg = op->reg;
+    }
+}
+
 void second_pass(const struct statement_list *result) {
     for (int i = 0; i < result->count; i++) {
-        const struct statement *stmnt = &result->statements[i];
+        struct statement *stmnt = &result->statements[i];
         if (stmnt->type == ST_INSTRUCTION) { // TODO ING
             struct operand_analysis analysis = capture_operands(&stmnt->instruction);
             determine_prefixes(&analysis);
-
+            rearrange_instruction(&stmnt->instruction, &analysis);
         }
     }
 }
