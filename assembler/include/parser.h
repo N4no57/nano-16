@@ -142,6 +142,34 @@ struct statement_list {
     struct statement *statements;
 };
 
+// the schizo post has returned
+// symbol table semantics
+struct symbol_table {
+    // I do not want this shi not ready for the object file generation in the same way as my last assembler
+    // how tf did I go wrong? idk. imma check brb
+    // okay so now that I check this shi gonna be really hard since symbols for my linker need to track the segment their in and thats kinda tricky
+    // how tf do I do that? the symbol struct is kinda idk existent but not what I want for this struct... hmmmmmm
+    // okay WHAT THE FUCK IS THIS?!?!?
+    // nah I got this
+    // I need the symbol to... uh oh... I remember now... symbols are either things like variables or labels!!!
+    // AAAAAAAAAAAAAAAAAAAAA
+    // man what the fuck is going on
+    // screw this I'm asking GPT
+    // no no... I got this
+    u64 symbol_count;
+    // okay this is a slight problem cus like how tf do I do labels and value placeholders?
+    // NO NO NO!!!! type is tracked so like yeah... its fine
+    // the goddamn thinga majiga... template or example or rather test assembly file doesn't use the
+    // X = val ah symbol
+    // but it is a feature I want?
+    // cmere robot help me out
+    // okay I know what to do
+    // + I forgot this line but its here now
+    u64 capacity;
+    struct symbol *symbols;
+    // I think now it would be fine
+};
+
 struct statement_list parse(const token_list *tokens);
 
 #endif //PARSER_H
