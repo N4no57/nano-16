@@ -120,6 +120,28 @@ const char* reg_to_string(enum registers r) {
     }
 }
 
+// just ignore the lookup table style functions
+// just ignore em... they don't bothor me
+// right... appending for the symbol table... this will be annoying
+void append_sym(struct symbol_table *symtbl, struct symbol *sym) {
+    // prelude: pc blow up? I think not
+    // if the pointer to the symbol table doesn't exist then WTF are we doing here?
+    // to not blow up my PC time to check I don't use more memory than available
+    if (symtbl->symbol_count >= symtbl->capacity) {
+        symtbl->capacity *= 2; // double for the lolz
+        struct symbol *nullDetector5000 = realloc(symtbl->symbols, symtbl->capacity * sizeof(*symtbl->symbols)); // thx autocomplete
+        // to also not blow up my pc
+        if (!nullDetector5000) {
+            fprintf(stderr, "Out of memory\n"); // HOW TF
+            exit(EXIT_FAILURE);
+        }
+        symtbl->symbols = nullDetector5000; // W name, ye?
+        // prelude over... right?
+    }
+    // now to do the actual bit
+    symtbl->symbols[symtbl->symbol_count++] = *sym; // hope this is a data copy.. yeah it is
+}
+
 void print_operand(struct operand *op) {
     switch (op->type) {
         case OPERAND_NONE:
