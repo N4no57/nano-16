@@ -728,6 +728,11 @@ void second_pass(const struct statement_list *result) {
             determine_prefixes(&analysis);
             rearrange_instruction(&stmnt->instruction, &analysis);
         } else if (stmnt->type == ST_SYMBOL) {
+            // aight bet lets do this
+            // just append it to a separate list what the fuck
+            // that was easy... apart from making the appending function but meh thats what I get for coding in the first place
+
+        } else {
 
         }
     }
@@ -736,6 +741,9 @@ void second_pass(const struct statement_list *result) {
 struct statement_list parse(const token_list *tokens) {
     struct statement_list result;
     init_statement_list(&result);
+
+    // just gonna slip this right in here
+    struct symbol_table symtbl;
 
     size_t tok_idx = 0;
     token current_tok = tokens->data[tok_idx];
@@ -747,7 +755,7 @@ struct statement_list parse(const token_list *tokens) {
         print_statement(&result.statements[i]);
     }
 
-    second_pass(&result);
+    second_pass(&result, &symtbl);
 
     return result;
 }
