@@ -408,6 +408,12 @@ void first_pass(const token_list *tokens, token *current_tok, size_t *tok_idx, s
         }
 
         if (current_tok->type == TT_IDENTIFIER) {
+            // man the fuck am I looking at?
+            // where's my variable symbol type shit
+            // ima remake this bit but its gonna be complicated no?
+            // naaaaah... ah shi that type of symbol is not tracked
+            // my example doesn't use it... I'm not going to do that
+            // PEACE!!!!!
             struct symbol sym;
             sym.name = strdup(current_tok->value);
             sym.pos = current_tok->pos;
