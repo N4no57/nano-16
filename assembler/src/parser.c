@@ -720,7 +720,7 @@ void rearrange_instruction(struct instruction *inst, struct operand_analysis *op
     inst->operands = idx;
 }
 
-void second_pass(const struct statement_list *result) {
+void second_pass(const struct statement_list *result, const struct symbol_table *sym_tbl) {
     for (int i = 0; i < result->count; i++) {
         const struct statement *stmnt = &result->statements[i];
         if (stmnt->type == ST_INSTRUCTION) { // TODO ING
