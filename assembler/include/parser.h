@@ -59,15 +59,29 @@ enum operand_type {
 
 enum symbol_type {
     SYM_LABEL,
+    SYM_VAR,
     SYM_UNRESOLVED
 };
 
 struct symbol {
-    char *name;
-    long value;
-    enum symbol_type type;
-    char defined;
-    position pos;
+    // thank you Chat... what the hell is this
+    // nah I'm not dumb, its what I should have already done!
+    // doesn't that make me stupid for that foresight? ah well its fine
+    // same as last time
+    char *name;            // symbol name
+    // already was here
+    // problem... this is absolute value... nah its fine segment positions are tracked... right? probably
+    u64 value;             // resolved value (or placeholder)
+    // already was here
+    enum symbol_type type; // SYM_LABEL or SYM_UNRESOLVED / SYM_VAR
+    // yup
+    char defined;          // 1 if value is resolved
+    // ooo this is new
+    u8 segment;            // segment code: CODE, DATA, BSS, etc.
+    // what the fuck is this? oh yeah actual debug info for the ppl who will use it... those ppl being me
+    // probably should make it do something... naaaaaaaaah
+    // future me problem
+    position pos;          // where it was declared
 };
 
 struct operand {
