@@ -613,57 +613,94 @@ void determine_prefixes(struct operand_analysis *op) {
 }
 
 void rearrange_instruction(struct instruction *inst, struct operand_analysis *op) {
-    inst->operands = 0;
-    for (int i = 0; i < 10; i++) {
-        memset(&inst->oprs[i], 0, sizeof(struct operand));
+    // schizo post time
+    // rearranging instructions requires looking at the analysed operand stored in operand.
+    // if the instruction is on of them wierd ones that has no operands then what the fuck are we doing here?
+    // this function will probs get glossed over for those instructions with no operands cus they got
+    // no FUUUUUUUUUUCKING business being here
+    // I dunno if I should like reconstruct the operand which I can oooooooor shift them around which could fuck everything up
+    // ima do the dang reconstruction
+    struct operand collapsed[MAX_OPERANDS] = {0};
+    u8 idx = 0;
+
+    // put in the prefixes if necessary
+    if (op->needs_rex) inst->prefixes[inst->prefix_count++];
+    if (op->needs_aex) inst->prefixes[inst->prefix_count++];
+    if (op->needs_oex) inst->prefixes[inst->prefix_count++];
+
+    // check if modR/M exists then insert
+    // this is the true bit of the schizo post
+    // there is no single check for if the operand_analysis has a modR/M field to check
+    // more complex checks are needed
+    // which will be slightly annoying
+    // inserting it into the list will also be a little trickier
+    // again depends on how I do it
+    // nah I am dumb there is a value... stupid me
+    // no complex checks are needed just check the value FAAAAAAAAAAAA
+    if (op->needs_modrm) {
+        struct operand reop = {0};
+        reop.type = OPERAND_MODRM;
+        reop.modrm.directionality = op->direction; // pray to the assembler gods this is correct
+        reop.modrm.mod = op->mod; // pray once more
+        reop.modrm.reg = op->reg;
+        reop.modrm.rm = op->rm;
+        // if there are bugs I will kill past me... oh wait that's me... I DIDN'T DO ANYTHING WRONG!!!!
+        collapsed[idx++] = reop;
     }
 
-    if (!op->has_mem) {
-        // either:
-        // inst reg, reg
-        // inst reg, imm
-        struct operand modrm = {0};
-
-        modrm.type = OPERAND_MODRM;
-        modrm.modrm.mod = op->mod;
-        modrm.modrm.directionality = op->direction;
-        modrm.modrm.reg = op->reg;
-
-        inst->operands = 1;
-
-        if (op->has_imm) {
-            struct operand imm = {0};
-            imm.type = OPERAND_IMM;
-            imm.imm = op->imm_value;
-
-            inst->operands++;
-            inst->oprs[0] = modrm;
-            inst->oprs[1] = imm;
-            return;
-        }
-
-        modrm.modrm.rm = op->rm;
-        inst->oprs[0] = modrm;
-        return;
+    // check if SIB exists then insert
+    if (op->has_sib) {
+        struct operand reop = {0};
+        reop.type = OPERAND_SIB;
+        reop.sib.base = op->sib_base;
+        reop.sib.idx = op->sib_index;
+        reop.sib.mod = op->sib_scale;
+        collapsed[idx++] = reop;
     }
 
-    if (op->mem_kind == MEM_RM) {
-        struct operand modrm = {0};
-
-        modrm.type = OPERAND_MODRM;
-        modrm.modrm.mod = op->mod;
-        modrm.modrm.directionality = op->direction;
-        modrm.modrm.reg = op->reg;
+    // check if Displacement exists then insert
+    if (op->has_disp) {
+        struct operand reop = {0};
+        reop.type = OPERAND_DISP;
+        reop.disp = op->disp_value;
+        collapsed[idx++] = reop;
     }
+
+    // check if absolute exists then insert
+    if (op->has_abs) {
+        struct operand reop = {0};
+        reop.type = OPERAND_ABS;
+        reop.imm = op->abs_value;
+        collapsed[idx++] = reop;
+    }
+
+    // check if Immediate exists then insert
+    if (op->has_imm) {
+        struct operand reop = {0}; // why tf do I keep repeating this shit?
+        reop.type = OPERAND_IMM;
+        reop.imm = op->imm_value;
+        collapsed[idx++] = reop;
+    }
+
+    // check if bank override exists then insert
+    // there is and is not a bank override operand this is a weird one that I will skip out on for now as well... yeah...
+
+    // overwrite the instruction's operand list
+    for (int i = 0; i < idx; i++) {
+        inst->oprs[i] = collapsed[i];
+    }
+    inst->operands = idx;
 }
 
 void second_pass(const struct statement_list *result) {
     for (int i = 0; i < result->count; i++) {
-        struct statement *stmnt = &result->statements[i];
+        const struct statement *stmnt = &result->statements[i];
         if (stmnt->type == ST_INSTRUCTION) { // TODO ING
             struct operand_analysis analysis = capture_operands(&stmnt->instruction);
             determine_prefixes(&analysis);
             rearrange_instruction(&stmnt->instruction, &analysis);
+        } else if (stmnt->type == ST_SYMBOL) {
+
         }
     }
 }
