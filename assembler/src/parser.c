@@ -855,7 +855,7 @@ void directive_parsing(struct directive *dir, const struct symbol_table *sym_tbl
     }
 }
 
-void second_pass(const struct statement_list *result, struct symbol_table *sym_tbl) { // TODO ING
+void second_pass(const struct statement_list *result, struct symbol_table *sym_tbl, segment_table *seg_table) { // TODO ING
     for (int i = 0; i < result->count; i++) {
         struct statement *stmnt = &result->statements[i];
         if (stmnt->type == ST_INSTRUCTION) {
@@ -872,7 +872,7 @@ void second_pass(const struct statement_list *result, struct symbol_table *sym_t
             // anyways I need to do something with this information
             // so like if this is the .segment directive then I gotta change the tracked segment
             // segments are not tracked?
-            directive_parsing(&stmnt->directive, sym_tbl);
+            directive_parsing(&stmnt->directive, sym_tbl, seg_table);
         }
     }
 }
