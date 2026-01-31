@@ -28,7 +28,18 @@ int main(int argc, char **argv) {
 
     token_list *tokens = tokenise(filename, buffer);
 
-    struct statement_list list = parse(tokens);
+    struct statement_list stmnt_list;
+    init_statement_list(&stmnt_list);
+
+    // just gonna slip this right in here
+    struct symbol_table symtbl;
+    init_symbol_table(&symtbl);
+
+    // again just gonna slip this in
+    segment_table seg_table;
+    init_segment_table(&seg_table);
+
+    parse(tokens, &stmnt_list, &symtbl, &seg_table);
 
     free(buffer);
     return 0;
