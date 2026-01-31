@@ -223,8 +223,12 @@ typedef struct {
     segment *segments;
     u64 count;
     u64 capacity;
+    i64 current_seg;
 } segment_table;
 
-struct statement_list parse(const token_list *tokens);
+void init_symbol_table(struct symbol_table *symtbl);
+void init_segment_table(segment_table *st);
+void init_statement_list(struct statement_list *list);
+void parse(const token_list *tokens, struct statement_list *stmnt_list, struct symbol_table *symtbl, segment_table *seg_table);
 
 #endif //PARSER_H
