@@ -75,9 +75,10 @@ struct symbol {
     // already was here
     enum symbol_type type; // SYM_LABEL or SYM_UNRESOLVED / SYM_VAR
     // yup
-    char defined;          // 1 if value is resolved
+    i8 defined;          // 1 if value is resolved
     // ooo this is new
-    u8 segment;            // segment code: CODE, DATA, BSS, etc.
+    u64 seg_id;            // segment code: CODE, DATA, BSS, etc.
+    u64 offset; // where this is in said segment from wherever it starts idgaf as long as it workjs
     // what the fuck is this? oh yeah actual debug info for the ppl who will use it... those ppl being me
     // probably should make it do something... naaaaaaaaah
     // future me problem
@@ -148,15 +149,12 @@ struct directive {
 
         union {
             i64 literal;
-            struct {
-                u64 sym_id;
-                i64 addend;
-            };
-        } *values;
+            u64 sym_id;
+        };
+    } *values;
 
-        u64 offset; // directive where the fuck u at?
-        u64 byte_size; // directive how tf u so fat?
-    };
+    u64 offset; // directive where the fuck u at? where in the binary/segment it is in or smth
+    u64 byte_size; // directive how tf u so fat? fr fr tho this is like the total number of bytes
 };
 
 enum statement_type { ST_INSTRUCTION, ST_DIRECTIVE, ST_SYMBOL };
@@ -215,16 +213,16 @@ typedef struct {
     // I don't know why size is a thing since the total space can be allocated in one go... maybe...
     // yeah it can
     // no this is the data size
-    size_t size;
+    u64 size;
     // this is the thing that I said was not required or something
-    size_t capacity;
+    u64 capacity;
 } segment;
 
 typedef struct {
     // pretty standard stuff, chill
     segment *segments;
-    size_t count;
-    size_t capacity;
+    u64 count;
+    u64 capacity;
 } segment_table;
 
 struct statement_list parse(const token_list *tokens);
