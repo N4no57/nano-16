@@ -752,7 +752,40 @@ void rearrange_instruction(struct instruction *inst, struct operand_analysis *op
     inst->operands = idx;
 }
 
-void second_pass(const struct statement_list *result, struct symbol_table *sym_tbl) {
+void directive_parsing(struct directive *dir, const struct symbol_table *sym_tbl) {
+    if (strcmp(dir->name, "db") == 0) {
+        dir->kind = DIR_DB;
+        dir->elem_width = 1;
+    } else if (strcmp(dir->name, "dw") == 0) {
+        dir->kind = DIR_DW;
+        dir->elem_width = 2;
+        return;
+    } else if (strcmp(dir->name, "dd") == 0) {
+        dir->kind = DIR_DD;
+        dir->elem_width = 4;
+        return;
+    } else if (strcmp(dir->name, "dq") == 0) {
+        dir->kind = DIR_DQ;
+        dir->elem_width = 8;
+    }
+
+    // do the rest of the dX family that is the same
+    u64 i = 0;
+    dir->values = malloc(dir->args.size * sizeof(struct directive_value));
+    while (i < dir->args.size) {
+        const token *tok = &dir->args.data[i];
+        if (tok->type == TT_IMMEDIATE) {
+            dir->values[i].kind = DIR_LITERAL;
+            dir->values[i].literal = *(long *)tok->value;
+        } else if (tok->type == TT_IDENTIFIER) {
+            dir->values[i].kind = DIR_SYMBOL_REF;
+            dir->values[i].sym_id = find_symbol(sym_tbl, tok->value);
+        }
+        i++;
+    }
+}
+
+void second_pass(const struct statement_list *result, struct symbol_table *sym_tbl) { // TODO ING
     for (int i = 0; i < result->count; i++) {
         struct statement *stmnt = &result->statements[i];
         if (stmnt->type == ST_INSTRUCTION) { // TODO ING
