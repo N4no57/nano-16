@@ -438,6 +438,28 @@ void first_pass(const token_list *tokens, token *current_tok, size_t *tok_idx, s
             continue;
         }
 
+        // I forgor the fucking... whats it... directives
+        // yay... more complex ah logic yipeee...
+        if (current_tok->type == TT_DIRECTIVE) {
+            init_token_list(&stmnt.directive.args);
+            stmnt.type = ST_DIRECTIVE;
+            stmnt.directive.name = strdup(current_tok->value);
+            stmnt.directive.pos = current_tok->pos;
+
+            // dir val ["," val]+
+            while (1) {
+                if (current_tok->type != TT_COMMA) consume(tokens, tok_idx, current_tok);
+                push_token(&stmnt.directive.args, *current_tok);
+                consume(tokens, tok_idx, current_tok);
+                if (current_tok->type == TT_NEWLINE) {
+                    consume(tokens, tok_idx, current_tok);
+                    break;
+                }
+            }
+
+            continue;
+        }
+
         consume(tokens, tok_idx, current_tok);
     }
 }
