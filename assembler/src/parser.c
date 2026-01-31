@@ -504,6 +504,8 @@ void first_pass(const token_list *tokens, token *current_tok, size_t *tok_idx, s
                 }
             }
 
+            push_statement(result, &stmnt);
+
             continue;
         }
 
