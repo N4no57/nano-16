@@ -130,7 +130,7 @@ const char* reg_to_string(enum registers r) {
 }
 
 // just ignore the lookup table style functions
-ini// just ignore em... they don't bother me
+// just ignore em... they don't bother me
 
 // how did I forget this... idk but its here now
 void init_symbol_table(struct symbol_table *symtbl) {
