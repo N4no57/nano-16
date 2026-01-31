@@ -1,8 +1,11 @@
 ; ======================
 ; NAN-ISA Tokenizer Test
 ; ======================
-.db 0x10
+.segment data
+.db 0x10, 0x20, 0x30, 0x40
+.dw 0x1020, 0x3040
 
+.segment code
 start:
     MOV A, B                ; reg -> reg
     MOV C, [DI]             ; reg <- reg-indirect
