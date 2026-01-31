@@ -877,24 +877,18 @@ void second_pass(const struct statement_list *result, struct symbol_table *sym_t
     }
 }
 
-struct statement_list parse(const token_list *tokens) {
-    struct statement_list result;
-    init_statement_list(&result);
-
-    // just gonna slip this right in here
-    struct symbol_table symtbl;
-
+void parse(const token_list *tokens, struct statement_list *stmnt_list, struct symbol_table *symtbl, segment_table *seg_table) {
     size_t tok_idx = 0;
     token current_tok = tokens->data[tok_idx];
 
-    first_pass(tokens, &current_tok, &tok_idx, &result);
+    first_pass(tokens, &current_tok, &tok_idx, stmnt_list);
 
-    for (int i = 0; i < result.count; i++) {
+    for (int i = 0; i < stmnt_list->count; i++) {
         // printf("i = %d:\n", i);
-        print_statement(&result.statements[i]);
+        print_statement(&stmnt_list->statements[i]);
     }
 
-    second_pass(&result, &symtbl);
+    second_pass(stmnt_list, symtbl, seg_table);
 
-    return result;
+    seg_table->current_seg = -1;
 }
