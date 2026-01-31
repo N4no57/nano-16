@@ -792,7 +792,37 @@ void rearrange_instruction(struct instruction *inst, struct operand_analysis *op
     inst->operands = idx;
 }
 
-void directive_parsing(struct directive *dir, const struct symbol_table *sym_tbl) {
+void directive_parsing(struct directive *dir, const struct symbol_table *sym_tbl, segment_table *seg_table) {
+    if (strcmp(dir->name, "segment") == 0) {
+        if (dir->args.size == 0) {
+            printf("OI CUNT YA FUCKED UP SOMEWHERE\n");
+            printf("location info coming soon :)\n");
+            exit(1);
+        }
+
+        if (dir->args.data[0].type != TT_IDENTIFIER) {
+            printf("OI CUNT YA FUCKED UP SOMEWHERE\n");
+            printf("location info coming soon :)\n");
+            exit(1);
+        }
+
+        const i64 seg_id = find_segment(seg_table, dir->args.data[0].value);
+
+        if (seg_id == -1) {
+            segment seg = {0};
+            seg.name = strdup(dir->args.data[0].value);
+            seg.data = NULL;
+            seg.size = 0;
+            seg.capacity = 0;
+            seg_table->current_seg = seg_table->count;
+            push_segment(seg_table, &seg);
+            return;
+        }
+
+        if (seg_id != seg_table->current_seg) seg_table->current_seg = seg_id;
+        return;
+    }
+
     if (strcmp(dir->name, "db") == 0) {
         dir->kind = DIR_DB;
         dir->elem_width = 1;
