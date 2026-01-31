@@ -119,10 +119,44 @@ struct instruction { // an instruction after parsing
     struct operand oprs[MAX_OPERANDS];
 };
 
+enum directive_kind {
+    DIR_DB,
+    DIR_DW,
+    DIR_DD,
+    DIR_DQ,
+
+    DIR_SEGMENT,
+
+    DIR_UNKNOWN
+};
+
 struct directive {
     char *name;
     token_list args;
     position pos;
+    // okay new shit time for the pass 2 cus what already exists is NOT enough
+    enum directive_kind kind;
+
+    u8 elem_width; // so like if each thingy is 1 byte, 2 bytes or 4 bytes and so on
+    u32 value_count;
+
+    struct directive_value {
+        enum {
+            DIR_LITERAL,
+            DIR_SYMBOL_REF
+        } kind;
+
+        union {
+            i64 literal;
+            struct {
+                u64 sym_id;
+                i64 addend;
+            };
+        } *values;
+
+        u64 offset; // directive where the fuck u at?
+        u64 byte_size; // directive how tf u so fat?
+    };
 };
 
 enum statement_type { ST_INSTRUCTION, ST_DIRECTIVE, ST_SYMBOL };
