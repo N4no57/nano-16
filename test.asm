@@ -1,6 +1,7 @@
 ; ======================
 ; NAN-ISA Tokenizer Test
 ; ======================
+.db 0x10
 
 start:
     MOV A, B                ; reg -> reg
