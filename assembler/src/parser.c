@@ -238,6 +238,36 @@ enum registers matchRegister(const char *str) {
     return getregister(str);
 }
 
+void init_segment_table(segment_table *st) {
+    st->capacity = STATEMENT_LIST_BASE_CAPACITY;
+    st->count = 0;
+    st->current_seg = -1;
+    st->segments = malloc(st->capacity * sizeof(segment));
+}
+
+void push_segment(segment_table *st, const segment *seg) {
+    if (st->count >= st->capacity) {
+        st->capacity *= 2;
+        segment *tmp = realloc(st->segments, sizeof(struct statement) * st->capacity);
+        if (!tmp) {
+            perror("realloc");
+            exit(EXIT_FAILURE);
+        }
+        st->segments = tmp;
+    }
+    st->segments[st->count] = *seg;
+    st->count++;
+}
+
+i64 find_segment(const segment_table *st, const char *name) {
+    for (i64 i = 0; i < st->count; i++) {
+        if (strcmp(name, st->segments[i].name) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
 void init_statement_list(struct statement_list *list) {
     list->capacity = STATEMENT_LIST_BASE_CAPACITY;
     list->count = 0;
