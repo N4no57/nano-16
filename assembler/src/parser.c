@@ -387,7 +387,7 @@ void parse_operands(const token_list *tokens, token *current_tok, size_t *tok_id
 
 void first_pass(const token_list *tokens, token *current_tok, size_t *tok_idx, struct statement_list *result) {
     while (current_tok->type != TT_EOF) {
-        struct statement stmnt;
+        struct statement stmnt = {0};
 
         if (current_tok->type == TT_MNEMONIC) {
             struct instruction inst;
