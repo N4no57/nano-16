@@ -130,7 +130,15 @@ const char* reg_to_string(enum registers r) {
 }
 
 // just ignore the lookup table style functions
-// just ignore em... they don't bothor me
+ini// just ignore em... they don't bother me
+
+// how did I forget this... idk but its here now
+void init_symbol_table(struct symbol_table *symtbl) {
+    symtbl->capacity = STATEMENT_LIST_BASE_CAPACITY;
+    symtbl->symbol_count = 0;
+    symtbl->symbols = malloc(symtbl->capacity * sizeof(struct symbol));
+}
+
 // right... appending for the symbol table... this will be annoying
 void append_sym(struct symbol_table *symtbl, struct symbol *sym) {
     // prelude: pc blow up? I think not
