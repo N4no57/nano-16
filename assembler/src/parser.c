@@ -91,6 +91,15 @@ struct operand_analysis {
     u8  operand_span_end;        // last operand index consumed
 };
 
+i64 find_symbol(const struct symbol_table *tbl, const char *name) {
+    for (i64 i = 0; i < tbl->symbol_count; i++) {
+        if (strcmp(tbl->symbols[i].name, name) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
 const char* opcode_to_string(enum opcode opc) {
     switch (opc) {
         case ADD: return "ADD"; case SUB: return "SUB"; case AND: return "AND";
