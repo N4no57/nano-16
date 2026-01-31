@@ -36,6 +36,8 @@ typedef struct token_list {
     token *data;
 } token_list;
 
+void init_token_list(token_list *tokenList);
+void push_token(token_list *tokenList, const token tok);
 token_list *tokenise(char *filename, const char *string);
 
 #endif //TOKENISER_H
