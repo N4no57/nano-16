@@ -351,6 +351,7 @@ void parse_mem_op(const token_list *tokens, token *current_tok, size_t *tok_idx,
 }
 
 void parse_operands(const token_list *tokens, token *current_tok, size_t *tok_idx, struct instruction *inst) {
+    // I gotta do them fucking size spec shits so yea gonna mark that as a TODO
     do {
         struct operand oprd = {0};
         if (current_tok->type == TT_COMMA) consume(tokens, tok_idx, current_tok);
