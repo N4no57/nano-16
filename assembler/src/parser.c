@@ -743,9 +743,9 @@ void rearrange_instruction(struct instruction *inst, struct operand_analysis *op
     inst->operands = idx;
 }
 
-void second_pass(const struct statement_list *result, const struct symbol_table *sym_tbl) {
+void second_pass(const struct statement_list *result, struct symbol_table *sym_tbl) {
     for (int i = 0; i < result->count; i++) {
-        const struct statement *stmnt = &result->statements[i];
+        struct statement *stmnt = &result->statements[i];
         if (stmnt->type == ST_INSTRUCTION) { // TODO ING
             struct operand_analysis analysis = capture_operands(&stmnt->instruction);
             determine_prefixes(&analysis);
@@ -753,10 +753,14 @@ void second_pass(const struct statement_list *result, const struct symbol_table 
         } else if (stmnt->type == ST_SYMBOL) {
             // aight bet lets do this
             // just append it to a separate list what the fuck
+            append_sym(sym_tbl, &stmnt->symbol);
             // that was easy... apart from making the appending function but meh thats what I get for coding in the first place
-
         } else {
-
+            // okay so the only other option is a directive... if somehow something else exists then what the fu-
+            // anyways I need to do something with this information
+            // so like if this is the .segment directive then I gotta change the tracked segment
+            // segments are not tracked?
+            // the .dX family is gonna be something cus idk man
         }
     }
 }
