@@ -204,6 +204,29 @@ struct symbol_table {
     // I think now it would be fine
 };
 
+// the time has come for segments... how many tables are necessary?
+// idk but another one has risen
+// COPY PASTE BABY!!
+typedef struct {
+    // name cus like, how else am I supposed to know what this is?
+    char *name;
+    // data cus thats the FUCKING DATA
+    uint8_t *data;
+    // I don't know why size is a thing since the total space can be allocated in one go... maybe...
+    // yeah it can
+    // no this is the data size
+    size_t size;
+    // this is the thing that I said was not required or something
+    size_t capacity;
+} segment;
+
+typedef struct {
+    // pretty standard stuff, chill
+    segment *segments;
+    size_t count;
+    size_t capacity;
+} segment_table;
+
 struct statement_list parse(const token_list *tokens);
 
 #endif //PARSER_H
