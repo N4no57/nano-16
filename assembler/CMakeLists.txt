@@ -7,4 +7,5 @@ add_executable(nano16-as src/main.c
         src/tokeniser.c include/tokeniser.h
         src/parser.c include/parser.h
         src/asmlib.c include/asmlib.h
+        src/byte_emitter.c include/byte_emitter.h
 )
