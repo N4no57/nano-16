@@ -179,6 +179,9 @@ void print_operand(struct operand *op) {
         case OPERAND_RM:
             printf("RM:%s", reg_to_string(op->reg));
         break;
+        case OPERAND_SYM:
+            printf("SYM:%s", op->sym.name);
+        break;
         case OPERAND_MODRM:
             printf("ModR/M(mod=%u reg=%s rm=%s)", op->modrm.mod, reg_to_string(op->modrm.reg), reg_to_string(op->modrm.rm));
         break;
@@ -268,6 +271,30 @@ i64 find_segment(const segment_table *st, const char *name) {
     return -1;
 }
 
+void init_segment(segment *seg) {
+    // assumes a name already exists
+    seg->capacity = STATEMENT_LIST_BASE_CAPACITY;
+    seg->size = 0;
+    seg->data = malloc(seg->capacity * sizeof(u8));
+}
+
+void push_bytes(segment *seg, const u8 *data, u64 size) {
+    if (seg->size + size >= seg->capacity) {
+        while (seg->capacity < seg->size + size) {
+            seg->capacity *= 2;
+        }
+
+        u8 *tmp = realloc(seg->data, seg->capacity * sizeof(u8));
+        if (!tmp) {
+            perror("realloc");
+            exit(EXIT_FAILURE);
+        }
+        seg->data = tmp;
+    }
+
+    memcpy(seg->data + seg->size, data, size);
+}
+
 void init_statement_list(struct statement_list *list) {
     list->capacity = STATEMENT_LIST_BASE_CAPACITY;
     list->count = 0;
@@ -296,13 +323,14 @@ void consume(const token_list *tokens, size_t *idx, token *tok) {
 void parse_value(const token_list *tokens, token *current_tok, size_t *tok_idx, struct instruction *inst) {
     struct operand oprd = {0};
     if (current_tok->type == TT_IDENTIFIER) { // identifier
-        // dunno how to handle this rn
+        oprd.type = OPERAND_SYM;
+        oprd.sym.name = strdup(current_tok->value);
     } else { // actual number
         oprd.type = OPERAND_IMM;
         oprd.imm = (unsigned int)current_tok->type;
         oprd.size = oprd.imm > 0xFF ? 2 : 1; // not full proof need to update this when refining assembler
-        inst->oprs[inst->operands++] = oprd;
     }
+    inst->oprs[inst->operands++] = oprd;
     consume(tokens, tok_idx, current_tok);
 }
 
@@ -652,7 +680,7 @@ struct operand_analysis capture_operands(const struct instruction *inst) {
                 if (op.imm >= 256) result.imm_size = 1;
                 break;
             default:
-                perror("operand analysis error");
+                printf("operand analysis error\n");
                 exit(EXIT_FAILURE);
         }
     }
@@ -811,10 +839,8 @@ void directive_parsing(struct directive *dir, const struct symbol_table *sym_tbl
         if (seg_id == -1) {
             segment seg = {0};
             seg.name = strdup(dir->args.data[0].value);
-            seg.data = NULL;
-            seg.size = 0;
-            seg.capacity = 0;
-            seg_table->current_seg = seg_table->count;
+            init_segment(&seg);
+            seg_table->current_seg = (i64)seg_table->count;
             push_segment(seg_table, &seg);
             return;
         }
@@ -865,6 +891,7 @@ void second_pass(const struct statement_list *result, struct symbol_table *sym_t
         } else if (stmnt->type == ST_SYMBOL) {
             // aight bet lets do this
             // just append it to a separate list what the fuck
+            stmnt->symbol.seg_id = seg_table->current_seg;
             append_sym(sym_tbl, &stmnt->symbol);
             // that was easy... apart from making the appending function but meh thats what I get for coding in the first place
         } else {
@@ -889,6 +916,8 @@ void parse(const token_list *tokens, struct statement_list *stmnt_list, struct s
     }
 
     second_pass(stmnt_list, symtbl, seg_table);
+
+    printf("bleh\n");
 
     seg_table->current_seg = -1;
 }

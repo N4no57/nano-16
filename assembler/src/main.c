@@ -2,11 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../include/byte_emitter.h"
 #include "../include/tokeniser.h"
 #include "../include/parser.h"
-
-#define GEN_SIB(scale, index, base) (((scale) << 6) | ((index) << 3) | ((base)))
-#define GEN_MODRM(mod, reg, rm) (((mod) << 6) | (((reg) & 7) << 3) | ((rm) & 7))
 
 int main(int argc, char **argv) {
     char filename[] = "test.asm";
@@ -40,6 +38,14 @@ int main(int argc, char **argv) {
     init_segment_table(&seg_table);
 
     parse(tokens, &stmnt_list, &symtbl, &seg_table);
+
+    if (seg_table.count == 0) {
+        printf("No symbol table found/generated\n");
+        printf("what are you doing you donut\n");
+        exit(0);
+    }
+
+    emit_bytes(&stmnt_list, &symtbl, &seg_table);
 
     free(buffer);
     return 0;

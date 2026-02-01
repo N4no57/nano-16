@@ -16,8 +16,6 @@
 #define AEX_PREFIX(M) (AEX | (M & 1))
 #define OEX_PREFIX(W) (OEX | (W & 1))
 
-#include <stddef.h>
-
 #include "asmlib.h"
 #include "tokeniser.h"
 
@@ -28,7 +26,8 @@ enum opcode {
     POP, INB, OUTB, LEA, JMP, JZ, JNZ,
     JE, JNE, // pseudo instruction
     JC, JNC, CALL, RET, JA, JAE, JB, JBE,
-    JG, JGE, JL, JLE, NOP, HLT
+    JG, JGE, JL, JLE, NOP, HLT,
+    UNKNOWN
 };
 
 enum registers {
@@ -53,6 +52,7 @@ enum operand_type {
     OPERAND_IMM,
     OPERAND_ABS,
     OPERAND_DISP,
+    OPERAND_SYM,
     OPERAND_REG,
     OPERAND_RM
 };
@@ -77,7 +77,7 @@ struct symbol {
     // yup
     i8 defined;          // 1 if value is resolved
     // ooo this is new
-    u64 seg_id;            // segment code: CODE, DATA, BSS, etc.
+    i64 seg_id;            // segment code: CODE, DATA, BSS, etc.
     u64 offset; // where this is in said segment from wherever it starts idgaf as long as it workjs
     // what the fuck is this? oh yeah actual debug info for the ppl who will use it... those ppl being me
     // probably should make it do something... naaaaaaaaah
@@ -92,6 +92,10 @@ struct operand {
         u32 imm; // immediate/absolute value
         i32 disp; // displacement
         enum registers reg;
+
+        struct {
+            char *name;
+        } sym;
 
         struct  {
             u8 mod;
@@ -114,7 +118,7 @@ struct instruction { // an instruction after parsing
     position pos; // position in file and filename
 
     i8 prefix_count;
-    i8 prefixes[MAX_PREFIX]; // prefix bytes
+    u8 prefixes[MAX_PREFIX]; // prefix bytes
 
     u8 operands; // how many operands
     struct operand oprs[MAX_OPERANDS];
@@ -209,7 +213,7 @@ typedef struct {
     // name cus like, how else am I supposed to know what this is?
     char *name;
     // data cus thats the FUCKING DATA
-    uint8_t *data;
+    u8 *data;
     // I don't know why size is a thing since the total space can be allocated in one go... maybe...
     // yeah it can
     // no this is the data size
@@ -227,7 +231,10 @@ typedef struct {
 } segment_table;
 
 void init_symbol_table(struct symbol_table *symtbl);
+i64 find_symbol(const struct symbol_table *tbl, const char *name);
 void init_segment_table(segment_table *st);
+i64 find_segment(const segment_table *st, const char *name);
+void push_bytes(segment *seg, const u8 *data, u64 size);
 void init_statement_list(struct statement_list *list);
 void parse(const token_list *tokens, struct statement_list *stmnt_list, struct symbol_table *symtbl, segment_table *seg_table);
 
