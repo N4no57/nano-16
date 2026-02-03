@@ -42,7 +42,7 @@ int main(int argc, char **argv) {
     if (seg_table.count == 0) {
         printf("No symbol table found/generated\n");
         printf("what are you doing you donut\n");
-        exit(0);
+        exit(EXIT_FAILURE);
     }
 
     emit_bytes(&stmnt_list, &symtbl, &seg_table);

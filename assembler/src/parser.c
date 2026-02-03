@@ -73,6 +73,14 @@ struct operand_analysis {
     u8  imm_src_index;
     i8  imm_to_mem;              // AEX mode 11 vs 01
 
+    /* ========= Symbol information ========= */
+
+    // info I need here is... well...
+    // technically there can be up to 3 symbols in an assembly instruction
+    // but semantically there can only be up to 2
+    // in other words a need a list with a max of 2 elements that tracks
+    // the symbol and what operand it possibly takes the place of
+    // IDK if that kind of tracking is possible
 
     /* ========= Derived encoding info ========= */
 
@@ -678,6 +686,11 @@ struct operand_analysis capture_operands(const struct instruction *inst) {
                 result.imm_src_index = i;
                 result.imm_size = 2;
                 if (op.imm >= 256) result.imm_size = 1;
+                break;
+            case OPERAND_SYM:
+                // symbols is just a placeholder value
+                // so I need to mark this as a placeholder and pass in the name of the symbol
+                // result.
                 break;
             default:
                 printf("operand analysis error\n");

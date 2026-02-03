@@ -78,7 +78,6 @@ struct opcode_info get_opcode_info(enum opcode op) {
 }
 
 void emit_instruction(const struct instruction *inst, segment *cur_seg) {
-
     u8 bytes[MAX_BYTES] = {0};
     u64 byte_idx = 0;
 
@@ -126,6 +125,10 @@ void emit_bytes(struct statement_list *stmnt_list, struct symbol_table *symtbl, 
             emit_instruction(&stmnt->instruction, cur_seg);
         } else if (stmnt->type == ST_SYMBOL) {
             struct symbol *sym = &symtbl->symbols[find_symbol(symtbl, stmnt->symbol.name)];
+
+            // The symbols are already in the statement list but also happen to have been pushed into the symbol table
+            // so why are these being counted as errors?
+            // so like heh?
 
             if (!sym) {
                 // how the fuck did we get here?
