@@ -52,7 +52,6 @@ enum operand_type {
     OPERAND_IMM,
     OPERAND_ABS,
     OPERAND_DISP,
-    OPERAND_SYM,
     OPERAND_REG,
     OPERAND_RM
 };
@@ -87,6 +86,7 @@ struct symbol {
 
 struct operand {
     enum operand_type type;
+    u8 has_symbol;
     u8 size;
     union {
         u32 imm; // immediate/absolute value
