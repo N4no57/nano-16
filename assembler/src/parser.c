@@ -1,4 +1,5 @@
 #include "../include/parser.h"
+#include "../include/asmlib.h"
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -52,6 +53,7 @@ struct operand_analysis {
     /* ========= Displacement ========= */
 
     i8  has_disp;
+    i8  is_disp_sym;
     i32 disp_value;
     u8  disp_size;               // 1 or 2 bytes
     u8  disp_src_index;
@@ -60,6 +62,7 @@ struct operand_analysis {
     /* ========= Absolute ========= */
 
     i8  has_abs;
+    i8  is_abs_sym;
     i64 abs_value;
     u8  abs_size;
     u8  abs_src_index;
@@ -68,6 +71,7 @@ struct operand_analysis {
     /* ========= Immediate ========= */
 
     i8  has_imm;
+    i8  is_imm_sym;
     i64 imm_value;
     u8  imm_size;
     u8  imm_src_index;
@@ -165,22 +169,22 @@ void print_operand(struct operand *op) {
             printf("NONE");
         break;
         case OPERAND_IMM:
-            printf("IMM:%u", op->imm);
+            if (op->has_symbol) printf("IMM_SYM");
+            else printf("IMM:%u", op->imm);
         break;
         case OPERAND_ABS:
-            printf("ABS:%u", op->imm);
+            if (op->has_symbol) printf("ABS_SYM");
+            else printf("ABS:%u", op->imm);
         break;
         case OPERAND_DISP:
-            printf("DISP:%d", op->disp);
+            if (op->has_symbol) printf("DISP_SYM");
+            else printf("DISP:%d", op->disp);
         break;
         case OPERAND_REG:
             printf("REG:%s", reg_to_string(op->reg));
         break;
         case OPERAND_RM:
             printf("RM:%s", reg_to_string(op->reg));
-        break;
-        case OPERAND_SYM:
-            printf("SYM:%s", op->sym.name);
         break;
         case OPERAND_MODRM:
             printf("ModR/M(mod=%u reg=%s rm=%s)", op->modrm.mod, reg_to_string(op->modrm.reg), reg_to_string(op->modrm.rm));
@@ -322,11 +326,11 @@ void consume(const token_list *tokens, size_t *idx, token *tok) {
 
 void parse_value(const token_list *tokens, token *current_tok, size_t *tok_idx, struct instruction *inst) {
     struct operand oprd = {0};
+    oprd.type = OPERAND_IMM;
     if (current_tok->type == TT_IDENTIFIER) { // identifier
-        oprd.type = OPERAND_SYM;
         oprd.sym.name = strdup(current_tok->value);
+        oprd.has_symbol = true;
     } else { // actual number
-        oprd.type = OPERAND_IMM;
         oprd.imm = (unsigned int)current_tok->type;
         oprd.size = oprd.imm > 0xFF ? 2 : 1; // not full proof need to update this when refining assembler
     }
@@ -660,24 +664,36 @@ struct operand_analysis capture_operands(const struct instruction *inst) {
                 break;
             case OPERAND_DISP:
                 result.has_disp = 1;
-                result.disp_value = op.disp;
                 result.disp_src_index = i;
                 result.disp_size = 2;
-                if (op.disp <= 127 || op.disp >= -128) result.disp_size = 1;
+                if (op.has_symbol) {
+                    result.is_disp_sym = 1;
+                } else {
+                    if (op.disp <= 127 || op.disp >= -128) result.disp_size = 1;
+                    result.disp_value = op.disp;
+                }
                 break;
             case OPERAND_ABS:
                 result.has_abs = 1;
-                result.abs_value = op.imm;
                 result.abs_src_index = i;
                 result.abs_size = 2;
-                if (op.imm >= 256) result.abs_size = 1;
+                if (op.has_symbol) {
+                    result.is_abs_sym = 1;
+                } else {
+                    if (op.imm < 256) result.abs_size = 1;
+                    result.abs_value = op.imm;
+                }
                 break;
             case OPERAND_IMM:
                 result.has_imm = 1;
-                result.imm_value = op.imm;
                 result.imm_src_index = i;
                 result.imm_size = 2;
-                if (op.imm >= 256) result.imm_size = 1;
+                if (op.has_symbol) {
+                    result.is_imm_sym = 1;
+                } else {
+                    result.imm_value = op.imm;
+                    if (op.imm < 256) result.imm_size = 1;
+                }
                 break;
             default:
                 printf("operand analysis error\n");
@@ -790,6 +806,7 @@ void rearrange_instruction(struct instruction *inst, struct operand_analysis *op
     if (op->has_disp) {
         struct operand reop = {0};
         reop.type = OPERAND_DISP;
+        reop.has_symbol = op->is_disp_sym;
         reop.disp = op->disp_value;
         collapsed[idx++] = reop;
     }
@@ -798,6 +815,7 @@ void rearrange_instruction(struct instruction *inst, struct operand_analysis *op
     if (op->has_abs) {
         struct operand reop = {0};
         reop.type = OPERAND_ABS;
+        reop.has_symbol = op->is_abs_sym;
         reop.imm = op->abs_value;
         collapsed[idx++] = reop;
     }
@@ -806,6 +824,7 @@ void rearrange_instruction(struct instruction *inst, struct operand_analysis *op
     if (op->has_imm) {
         struct operand reop = {0}; // why tf do I keep repeating this shit?
         reop.type = OPERAND_IMM;
+        reop.has_symbol = op->is_imm_sym;
         reop.imm = op->imm_value;
         collapsed[idx++] = reop;
     }
