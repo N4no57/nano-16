@@ -116,6 +116,8 @@ void emit_instruction(const struct instruction *inst, struct symbol_table *symtb
             if (op->size < -128 || op->size > 127) {
                 bytes[byte_idx++] = (op->imm & 0xff00) >> 8;
             }
+        } else if (op->type == OPERAND_SYM) {
+
         }
     }
 
