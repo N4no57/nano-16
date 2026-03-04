@@ -437,6 +437,22 @@ void parse_operands(const token_list *tokens, token *current_tok, size_t *tok_id
         if (current_tok->type == TT_COMMA) consume(tokens, tok_idx, current_tok);
         if (current_tok->type == TT_NEWLINE) return;
 
+        if (current_tok->type == TT_SIZESPEC) {
+            size_t len = strlen(current_tok->value);
+            char tmp[len+1];
+            strcpy(tmp, current_tok->value);
+            tmp[len] = '\0';
+            toUpper(tmp);
+            if (strcmp("WORD", tmp) == 0) {
+                oprd.size = 2;
+            } else if (strcmp("BYTE", tmp) == 0) {
+                oprd.size = 1;
+            } else {
+                print_error(&current_tok->pos, "Expected \"WORD\" or \"BYTE\"");
+            }
+            consume(tokens, tok_idx, current_tok);
+        }
+
         if (current_tok->type == TT_REGISTER) {
             oprd.type = OPERAND_REG;
             oprd.reg = matchRegister(current_tok->value);
@@ -468,6 +484,10 @@ void parse_operands(const token_list *tokens, token *current_tok, size_t *tok_id
 
 void first_pass(const token_list *tokens, token *current_tok, size_t *tok_idx, struct statement_list *result) {
     while (current_tok->type != TT_EOF) {
+        if (current_tok->type == TT_NEWLINE) {
+            consume(tokens, tok_idx, current_tok);
+            continue;
+        }
         struct statement stmnt = {0};
 
         if (current_tok->type == TT_MNEMONIC) {
