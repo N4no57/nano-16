@@ -77,8 +77,17 @@ struct opcode_info get_opcode_info(enum opcode op) {
     return opcode_table[table_size-1];
 }
 
-void emit_instruction(const struct instruction *inst, segment *cur_seg) {
+void emit_symbol(const struct operand *op, struct symbol_table *symtbl, u8 *bytes, u64 *idx, segment *cur_seg) {
+    i64 sym_idx = find_symbol(symtbl, op->sym.name);
 
+    if (sym_idx == -1) {
+
+    }
+
+
+}
+
+void emit_instruction(const struct instruction *inst, struct symbol_table *symtbl, segment *cur_seg) {
     u8 bytes[MAX_BYTES] = {0};
     u64 byte_idx = 0;
 
@@ -107,8 +116,6 @@ void emit_instruction(const struct instruction *inst, segment *cur_seg) {
             if (op->size < -128 || op->size > 127) {
                 bytes[byte_idx++] = (op->imm & 0xff00) >> 8;
             }
-        } else if (op->type == OPERAND_SYM) {
-
         }
     }
 
@@ -119,30 +126,33 @@ void emit_instruction(const struct instruction *inst, segment *cur_seg) {
 }
 
 void emit_bytes(struct statement_list *stmnt_list, struct symbol_table *symtbl, segment_table *seg_table) {
-    segment *cur_seg;
+    segment *cur_seg = NULL;
     for (int i = 0; i < stmnt_list->count; i++) {
         struct statement *stmnt = &stmnt_list->statements[i];
         if (stmnt->type == ST_INSTRUCTION) {
-            emit_instruction(&stmnt->instruction, cur_seg);
+            if (cur_seg == NULL) {
+                printf("\"Where are me fookin segments at mate?\" said the statement");
+                exit(1);
+            }
+
+            emit_instruction(&stmnt->instruction, symtbl, cur_seg);
         } else if (stmnt->type == ST_SYMBOL) {
-            struct symbol *sym = &symtbl->symbols[find_symbol(symtbl, stmnt->symbol.name)];
-
-            if (!sym) {
-                // how the fuck did we get here?
-                printf("undefined internal symbol\n");
+            if (cur_seg == NULL) {
+                printf("\"Where are me fookin segments at mate?\" said the symbol");
                 exit(1);
             }
 
-            if (sym->defined) {
-                // idk what to put here
-                // but I will error
-                printf("something about redefining or whatever\n");
+            i64 idx = find_symbol(symtbl, stmnt->symbol.name);
+            if (idx < 0) {
+                printf("undefined internal symbol: %s\n", stmnt->symbol.name);
                 exit(1);
             }
+            struct symbol *sym = &stmnt->symbol;
 
-            sym->defined = 1;
-            sym->seg_id = seg_table->current_seg;
-            sym->offset = cur_seg->size;
+            if (sym->type == SYM_LABEL) {
+                sym->offset = cur_seg->size;
+                sym->seg_id = seg_table->current_seg;
+            }
         } else {
             // can only be directives
             const struct directive *dir = &stmnt->directive;
