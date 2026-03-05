@@ -77,14 +77,26 @@ struct opcode_info get_opcode_info(enum opcode op) {
     return opcode_table[table_size-1];
 }
 
-void emit_symbol(const struct operand *op, struct symbol_table *symtbl, u8 *bytes, u64 *idx, segment *cur_seg) {
+void emit_symbol(const struct operand *op, struct symbol_table *symtbl, u8 *bytes, u64 *idx) {
     i64 sym_idx = find_symbol(symtbl, op->sym.name);
 
     if (sym_idx == -1) {
-
+        printf("This symbol doesn't fooking exist ya bastard");
+        exit(1);
     }
+    struct symbol *sym = &symtbl->symbols[sym_idx];
 
-
+    if (sym->type == SYM_VAR) {
+        bytes[(*idx)++] = sym->value & 0xff;
+        if (sym->value > 0xff) {
+            bytes[(*idx)++] = (sym->value >> 8) & 0xff;
+        }
+    } else if (sym->type == SYM_LABEL) {
+        if (sym->defined) {
+            bytes[(*idx)++] = 0xFF;
+            bytes[(*idx)++] = 0xFF;
+        }
+    }
 }
 
 void emit_instruction(const struct instruction *inst, struct symbol_table *symtbl, segment *cur_seg) {
@@ -116,8 +128,6 @@ void emit_instruction(const struct instruction *inst, struct symbol_table *symtb
             if (op->size < -128 || op->size > 127) {
                 bytes[byte_idx++] = (op->imm & 0xff00) >> 8;
             }
-        } else if (op->type == OPERAND_SYM) {
-
         }
     }
 

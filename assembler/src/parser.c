@@ -332,12 +332,24 @@ void consume(const token_list *tokens, size_t *idx, token *tok) {
     *tok = tokens->data[*idx];
 }
 
-void parse_value(const token_list *tokens, token *current_tok, size_t *tok_idx, struct instruction *inst) {
+void record_token(token *current_tok, struct statement_list *result) {
+    struct statement stmt = {0};
+    stmt.type = ST_SYMBOL;
+    stmt.symbol.defined = false;
+    stmt.type = SYM_UNRESOLVED;
+    stmt.symbol.name = strdup(current_tok->value);
+    stmt.symbol.pos = current_tok->pos;
+    push_statement(result, &stmt);
+}
+
+void parse_value(const token_list *tokens, token *current_tok, size_t *tok_idx,
+    struct instruction *inst, struct statement_list *result) {
     struct operand oprd = {0};
     oprd.type = OPERAND_IMM;
     if (current_tok->type == TT_IDENTIFIER) { // identifier
         oprd.sym.name = strdup(current_tok->value);
         oprd.has_symbol = true;
+        record_token(current_tok, result);
     } else { // actual number
         oprd.imm = (unsigned int)current_tok->type;
         oprd.size = oprd.imm > 0xFF ? 2 : 1; // not full proof need to update this when refining assembler
@@ -358,13 +370,14 @@ void parse_disp(const token_list *tokens, token *current_tok, size_t *tok_idx, s
     consume(tokens, tok_idx, current_tok); // consume disp
 }
 
-void parse_mem_op(const token_list *tokens, token *current_tok, size_t *tok_idx, struct instruction *inst) {
+void parse_mem_op(const token_list *tokens, token *current_tok, size_t *tok_idx,
+    struct instruction *inst, struct statement_list *result) {
     struct operand oprd = {0};
     consume(tokens, tok_idx, current_tok); // consume "["
 
     // ABS
     if (current_tok->type == TT_IDENTIFIER || current_tok->type == TT_IMMEDIATE) {
-        parse_value(tokens, current_tok, tok_idx, inst);
+        parse_value(tokens, current_tok, tok_idx, inst, result);
 
         struct operand *abs_opr = &inst->oprs[inst->operands-1];
         abs_opr->type = OPERAND_ABS;
@@ -438,7 +451,8 @@ void parse_mem_op(const token_list *tokens, token *current_tok, size_t *tok_idx,
     }
 }
 
-void parse_operands(const token_list *tokens, token *current_tok, size_t *tok_idx, struct instruction *inst) {
+void parse_operands(const token_list *tokens, token *current_tok, size_t *tok_idx,
+    struct instruction *inst, struct statement_list *result) {
     // I gotta do them fucking size spec shits so yea gonna mark that as a TODO
     do {
         struct operand oprd = {0};
@@ -475,12 +489,12 @@ void parse_operands(const token_list *tokens, token *current_tok, size_t *tok_id
         // both treated as immediate
         // but one is not the same as the other semantically but doesn't really matter at this stage
         if (current_tok->type == TT_IDENTIFIER || current_tok->type == TT_IMMEDIATE) {
-            parse_value(tokens, current_tok, tok_idx, inst);
+            parse_value(tokens, current_tok, tok_idx, inst, result);
             continue;
         }
 
         if (current_tok->type == TT_LBRACKET) {
-            parse_mem_op(tokens, current_tok, tok_idx, inst);
+            parse_mem_op(tokens, current_tok, tok_idx, inst, result);
             continue;
         }
 
@@ -508,7 +522,7 @@ void first_pass(const token_list *tokens, token *current_tok, size_t *tok_idx, s
             // token mnemonic = current_tok;
             consume(tokens, tok_idx, current_tok);
 
-            parse_operands(tokens, current_tok, tok_idx, &inst);
+            parse_operands(tokens, current_tok, tok_idx, &inst, result);
 
             stmnt.type = ST_INSTRUCTION;
             stmnt.instruction = inst;
@@ -535,7 +549,7 @@ void first_pass(const token_list *tokens, token *current_tok, size_t *tok_idx, s
             }
 
             consume(tokens, tok_idx, current_tok);
-            sym.defined = 1;
+            sym.defined = true;
             sym.type = SYM_LABEL;
 
             stmnt.type = ST_SYMBOL;
@@ -723,11 +737,6 @@ struct operand_analysis capture_operands(const struct instruction *inst) {
                     result.imm_value = op.imm;
                     if (op.imm < 256) result.imm_size = 1;
                 }
-                break;
-            case OPERAND_SYM:
-                // symbols is just a placeholder value
-                // so I need to mark this as a placeholder and pass in the name of the symbol
-                // result.
                 break;
             default:
                 printf("operand analysis error\n");
@@ -934,6 +943,32 @@ void directive_parsing(struct directive *dir, const struct symbol_table *sym_tbl
     }
 }
 
+void parse_symbol(struct symbol *sym, struct symbol_table *sym_tbl, segment_table *seg_table) {
+    i64 sym_id = find_symbol(sym_tbl, sym->name);
+    if (sym_id == -1) {
+        sym->seg_id = seg_table->current_seg;
+        append_sym(sym_tbl, sym);
+    } else if (sym_id >= 0) {
+        struct symbol *found_symbol = &sym_tbl->symbols[sym_id];
+
+        if (!found_symbol->defined) {
+            if (!sym->defined) return;
+            found_symbol->defined = true;
+            found_symbol->value = sym->value;
+            found_symbol->seg_id = seg_table->current_seg;
+            found_symbol->type = sym->type;
+            return;
+        }
+
+        if (!sym->defined) return;
+
+        char details[2048];
+        snprintf(details, sizeof(details), "Symbol \"%s\" already defined\n", found_symbol->name);
+        print_error(&sym->pos, details);
+        exit(1);
+    }
+}
+
 void second_pass(const struct statement_list *result, struct symbol_table *sym_tbl, segment_table *seg_table) { // TODO ING
     for (int i = 0; i < result->count; i++) {
         struct statement *stmnt = &result->statements[i];
@@ -944,8 +979,7 @@ void second_pass(const struct statement_list *result, struct symbol_table *sym_t
         } else if (stmnt->type == ST_SYMBOL) {
             // aight bet lets do this
             // just append it to a separate list what the fuck
-            stmnt->symbol.seg_id = seg_table->current_seg;
-            append_sym(sym_tbl, &stmnt->symbol);
+            parse_symbol(&stmnt->symbol, sym_tbl, seg_table);
             // that was easy... apart from making the appending function but meh thats what I get for coding in the first place
         } else {
             // okay so the only other option is a directive... if somehow something else exists then what the fu-

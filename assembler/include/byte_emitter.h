@@ -21,6 +21,26 @@ struct opcode_info {
     u8 ext_opc; // only if is_ext=1
 };
 
+typedef enum {
+    reloc_none,
+    reloc_absolute,
+    reloc_relative,
+    reloc_relax
+} relocation_type;
+
+typedef struct {
+    char *name;
+    i64 seg_id;
+    u64 seg_offset;
+    relocation_type type;
+} relocation_entry;
+
+typedef struct {
+    u64 count;
+    u64 capacity;
+    relocation_entry *entries;
+} relocation_table;
+
 void emit_bytes(struct statement_list *stmnt_list, struct symbol_table *symtbl, segment_table *seg_table);
 
 #endif //BYTE_EMITTER_H

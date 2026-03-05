@@ -126,9 +126,10 @@ int getsizespec(const char *string) {
 }
 
 int print_error(const position *pos, char *details) {
-    char str[2048]; // should handle most cases cleanly
-    const int result = sprintf(str, "%s:%d:%d: error: %s", pos->filename, pos->line, pos->column, details);
-    if (result < 0) return result; // error leave early
+    char str[8192]; // should handle most cases cleanly
+    const int result = sprintf(str, "%s:%d:%d: error: ", pos->filename, pos->line, pos->column);
+    strcat(str, details);
+    if (result < 0) return -1; // error leave early
 
     return printf("%s\n", str);
 }
