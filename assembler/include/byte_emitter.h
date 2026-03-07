@@ -23,13 +23,15 @@ struct opcode_info {
 
 typedef enum {
     reloc_none,
-    reloc_absolute,
-    reloc_relative,
+    reloc_absolute_8,
+    reloc_absolute_16,
+    reloc_relative_8,
+    reloc_relative_16,
     reloc_relax
 } relocation_type;
 
 typedef struct {
-    char *name;
+    u64 sym_idx;
     i64 seg_id;
     u64 seg_offset;
     relocation_type type;

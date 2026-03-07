@@ -77,7 +77,7 @@ struct opcode_info get_opcode_info(enum opcode op) {
     return opcode_table[table_size-1];
 }
 
-void emit_symbol(const struct operand *op, struct symbol_table *symtbl, u8 *bytes, u64 *idx) {
+void emit_symbol(const struct operand *op, segment_table *seg_table, struct symbol_table *symtbl, segment *current_seg, u8 *bytes, u64 *idx) {
     i64 sym_idx = find_symbol(symtbl, op->sym.name);
 
     if (sym_idx == -1) {
@@ -87,14 +87,31 @@ void emit_symbol(const struct operand *op, struct symbol_table *symtbl, u8 *byte
     struct symbol *sym = &symtbl->symbols[sym_idx];
 
     if (sym->type == SYM_VAR) {
-        bytes[(*idx)++] = sym->value & 0xff;
-        if (sym->value > 0xff) {
-            bytes[(*idx)++] = (sym->value >> 8) & 0xff;
+        if (sym->defined) {
+            bytes[(*idx)++] = sym->value & 0xff;
+            if (sym->value > 0xff) {
+                bytes[(*idx)++] = (sym->value >> 8) & 0xff;
+            }
+        } else {
+            bytes[(*idx)++] = 0xff;
+            bytes[(*idx)++] = 0xff;
         }
     } else if (sym->type == SYM_LABEL) {
+        // bytes[(*idx)++] = 0xff;
+        // bytes[(*idx)++] = 0xff;
         if (sym->defined) {
-            bytes[(*idx)++] = 0xFF;
-            bytes[(*idx)++] = 0xFF;
+            relocation_entry reloc = {0};
+            reloc.seg_id = sym->seg_id;
+            reloc.seg_offset = sym->offset;
+            reloc.sym_idx = sym_idx;
+            if (sym->seg_id == seg_table->current_seg) {
+                i32 distance = (i32)((i32)sym->offset - current_seg->size);
+                if (distance >= -128 && distance <= 127) {}
+            } else {
+                reloc.type = reloc_relax;
+                bytes[(*idx)++] = 0xff;
+                bytes[(*idx)++] = 0xff;
+            }
         }
     }
 }
