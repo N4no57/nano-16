@@ -43,6 +43,9 @@ typedef struct {
     relocation_entry *entries;
 } relocation_table;
 
-void emit_bytes(struct statement_list *stmnt_list, struct symbol_table *symtbl, segment_table *seg_table);
+void reloc_table_init(relocation_table *table);
+void reloc_table_push(relocation_table *table, const relocation_entry *entry);
+void reloc_table_free(const relocation_table *table);
+void emit_bytes(struct statement_list *stmnt_list, struct symbol_table *symtbl, segment_table *seg_table, relocation_table *relocs);
 
 #endif //BYTE_EMITTER_H

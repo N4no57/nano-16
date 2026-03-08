@@ -45,8 +45,19 @@ int main(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
 
-    emit_bytes(&stmnt_list, &symtbl, &seg_table);
+    relocation_table reloc_table;
+    reloc_table_init(&reloc_table);
+
+    emit_bytes(&stmnt_list, &symtbl, &seg_table, &reloc_table);
 
     free(buffer);
+    free(tokens);
+    free(stmnt_list.statements);
+    free(symtbl.symbols);
+    for (int i = 0; i < seg_table.count; i++) {
+        free(seg_table.segments[i].data);
+    }
+    free(seg_table.segments);
+    free(reloc_table.entries);
     return 0;
 }

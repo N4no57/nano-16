@@ -305,6 +305,7 @@ void push_bytes(segment *seg, const u8 *data, u64 size) {
     }
 
     memcpy(seg->data + seg->size, data, size);
+    seg->size += size;
 }
 
 void init_statement_list(struct statement_list *list) {
@@ -365,6 +366,7 @@ void parse_disp(const token_list *tokens, token *current_tok, size_t *tok_idx, s
     consume(tokens, tok_idx, current_tok); // consume "+"/"-"
     if (current_tok->type != TT_IDENTIFIER) oprd.disp = sign == '+' ? *(int *)current_tok->value : *(int *)current_tok->value * -1;
     else oprd.has_symbol = true;
+    if (oprd.has_symbol) oprd.sym.name = strdup(current_tok->value);
     oprd.size = oprd.disp > 127 || oprd.disp < -128 ? 2 : 1; // incomplete, be fixed in assembler revision
     inst->oprs[inst->operands++] = oprd;
     consume(tokens, tok_idx, current_tok); // consume disp
@@ -824,7 +826,7 @@ void rearrange_instruction(struct instruction *inst, struct operand_analysis *op
     // again depends on how I do it
     // nah I am dumb there is a value... stupid me
     // no complex checks are needed just check the value FAAAAAAAAAAAA
-    if (op->needs_modrm) {
+    if (op->has_mem) {
         struct operand reop = {0};
         reop.type = OPERAND_MODRM;
         reop.modrm.directionality = op->direction; // pray to the assembler gods this is correct
@@ -852,6 +854,9 @@ void rearrange_instruction(struct instruction *inst, struct operand_analysis *op
         reop.has_symbol = op->is_disp_sym;
         reop.disp = op->disp_value;
         collapsed[idx++] = reop;
+        if (reop.has_symbol) {
+             collapsed[idx-1].sym.name = inst->oprs[op->disp_src_index].sym.name;
+        }
     }
 
     // check if absolute exists then insert
@@ -861,6 +866,9 @@ void rearrange_instruction(struct instruction *inst, struct operand_analysis *op
         reop.has_symbol = op->is_abs_sym;
         reop.imm = op->abs_value;
         collapsed[idx++] = reop;
+        if (reop.has_symbol) {
+            collapsed[idx-1].sym.name = inst->oprs[op->abs_src_index].sym.name;
+        }
     }
 
     // check if Immediate exists then insert
@@ -870,6 +878,9 @@ void rearrange_instruction(struct instruction *inst, struct operand_analysis *op
         reop.has_symbol = op->is_imm_sym;
         reop.imm = op->imm_value;
         collapsed[idx++] = reop;
+        if (reop.has_symbol) {
+            collapsed[idx-1].sym.name = inst->oprs[op->imm_src_index].sym.name;
+        }
     }
 
     // check if bank override exists then insert
@@ -877,7 +888,7 @@ void rearrange_instruction(struct instruction *inst, struct operand_analysis *op
 
     // overwrite the instruction's operand list
     for (int i = 0; i < idx; i++) {
-        inst->oprs[i] = collapsed[i];
+        memcpy(&inst->oprs[i], &collapsed[i], sizeof(struct operand));
     }
     inst->operands = idx;
 }

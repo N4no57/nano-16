@@ -77,7 +77,43 @@ struct opcode_info get_opcode_info(enum opcode op) {
     return opcode_table[table_size-1];
 }
 
-void emit_symbol(const struct operand *op, segment_table *seg_table, struct symbol_table *symtbl, segment *current_seg, u8 *bytes, u64 *idx) {
+void reloc_table_init(relocation_table *table) {
+    table->count = 0;
+    table->capacity = 8;
+    table->entries = malloc(table->capacity * sizeof(*table->entries));
+    if (!table->entries) {
+        printf("Failed to allocate memory for relocation table\n");
+        exit(1);
+    }
+}
+
+void reloc_table_push(relocation_table *table, const relocation_entry *entry) {
+    if (table->count >= table->capacity) {
+        table->capacity *= 2;
+        relocation_entry *tmp = realloc(table->entries, table->capacity * sizeof(*table->entries));
+        if (!tmp) {
+            printf("Failed to allocate memory for relocation table\n");
+            exit(1);
+        }
+        table->entries = tmp;
+    }
+    table->entries[table->count++] = *entry;
+}
+
+void reloc_table_free(const relocation_table *table) {
+    free(table->entries);
+}
+
+void emit_byte(u8 *bytes, u64 *index, const u8 value) {
+    bytes[(*index)++] = value;
+}
+
+void emit_word(u8 *bytes, u64 *index, const u16 value) {
+    bytes[(*index)++] = value & 0xff;
+    bytes[(*index)++] = value >> 8;
+}
+
+void emit_symbol(const struct operand *op, segment_table *seg_table, struct symbol_table *symtbl, relocation_table *relocs, segment *current_seg, u8 *bytes, u64 *idx) {
     i64 sym_idx = find_symbol(symtbl, op->sym.name);
 
     if (sym_idx == -1) {
@@ -85,38 +121,48 @@ void emit_symbol(const struct operand *op, segment_table *seg_table, struct symb
         exit(1);
     }
     struct symbol *sym = &symtbl->symbols[sym_idx];
+    relocation_entry reloc = {0};
 
     if (sym->type == SYM_VAR) {
-        if (sym->defined) {
-            bytes[(*idx)++] = sym->value & 0xff;
+        if (sym->defined) { // if defined then emit
             if (sym->value > 0xff) {
-                bytes[(*idx)++] = (sym->value >> 8) & 0xff;
+                emit_word(bytes, idx, sym->value);
+            } else {
+                emit_byte(bytes, idx, sym->value);
             }
-        } else {
-            bytes[(*idx)++] = 0xff;
-            bytes[(*idx)++] = 0xff;
+        } else { // put a placeholder and make relocation entry
+            emit_word(bytes, idx, 0);
+            reloc.seg_id = seg_table->current_seg;
+            reloc.seg_offset = current_seg->size + *idx;
+            reloc.sym_idx = sym_idx;
+            reloc.type = reloc_relax;
+            reloc_table_push(relocs, &reloc);
         }
     } else if (sym->type == SYM_LABEL) {
-        // bytes[(*idx)++] = 0xff;
-        // bytes[(*idx)++] = 0xff;
+        reloc.seg_id = seg_table->current_seg;
+        reloc.seg_offset = current_seg->size + *idx;
+        reloc.sym_idx = sym_idx;
+        reloc.type = reloc_relax;
         if (sym->defined) {
-            relocation_entry reloc = {0};
-            reloc.seg_id = sym->seg_id;
-            reloc.seg_offset = sym->offset;
-            reloc.sym_idx = sym_idx;
             if (sym->seg_id == seg_table->current_seg) {
-                i32 distance = (i32)((i32)sym->offset - current_seg->size);
-                if (distance >= -128 && distance <= 127) {}
+                i32 distance = (i32)sym->offset - (i32)reloc.seg_offset;
+                if (distance >= -128 && distance <= 127) { // 8-bit
+                    reloc.type = reloc_relative_8;
+                    emit_byte(bytes, idx, 0);
+                } else { // 16-bit
+                    reloc.type = reloc_relative_16;
+                    emit_word(bytes, idx, 0);
+                }
             } else {
-                reloc.type = reloc_relax;
-                bytes[(*idx)++] = 0xff;
-                bytes[(*idx)++] = 0xff;
+                emit_word(bytes, idx, 0);
             }
         }
+        reloc_table_push(relocs, &reloc);
     }
+    push_bytes(current_seg, bytes, *idx);
 }
 
-void emit_instruction(const struct instruction *inst, struct symbol_table *symtbl, segment *cur_seg) {
+void emit_instruction(const struct instruction *inst, struct symbol_table *symtbl, relocation_table *relocs, segment_table *seg_tbl, segment *cur_seg) {
     u8 bytes[MAX_BYTES] = {0};
     u64 byte_idx = 0;
 
@@ -136,14 +182,22 @@ void emit_instruction(const struct instruction *inst, struct symbol_table *symtb
         } else if (op->type == OPERAND_SIB) {
             bytes[byte_idx++] = GEN_SIB(op->sib.mod, op->sib.idx, op->sib.base);
         } else if (op->type == OPERAND_ABS || op->type == OPERAND_IMM) {
-            bytes[byte_idx++] = op->imm & 0xff;
-            if (op->size > 255) {
-                bytes[byte_idx++] = (op->imm & 0xff00) >> 8;
+            if (op->has_symbol) {
+                emit_symbol(op, seg_tbl, symtbl, relocs, cur_seg, bytes, &byte_idx);
+            } else {
+                bytes[byte_idx++] = op->imm & 0xff;
+                if (op->size > 255) {
+                    bytes[byte_idx++] = (op->imm & 0xff00) >> 8;
+                }
             }
         } else if (op->type == OPERAND_DISP) {
-            bytes[byte_idx++] = op->disp & 0xff;
-            if (op->size < -128 || op->size > 127) {
-                bytes[byte_idx++] = (op->imm & 0xff00) >> 8;
+            if (op->has_symbol) {
+                emit_symbol(op, seg_tbl, symtbl, relocs, cur_seg, bytes, &byte_idx);
+            } else {
+                bytes[byte_idx++] = op->disp & 0xff;
+                if (op->size < -128 || op->size > 127) {
+                    bytes[byte_idx++] = (op->disp & 0xff00) >> 8;
+                }
             }
         }
     }
@@ -154,7 +208,7 @@ void emit_instruction(const struct instruction *inst, struct symbol_table *symtb
     push_bytes(cur_seg, bytes, byte_idx);
 }
 
-void emit_bytes(struct statement_list *stmnt_list, struct symbol_table *symtbl, segment_table *seg_table) {
+void emit_bytes(struct statement_list *stmnt_list, struct symbol_table *symtbl, segment_table *seg_table, relocation_table *relocs) {
     segment *cur_seg = NULL;
     for (int i = 0; i < stmnt_list->count; i++) {
         struct statement *stmnt = &stmnt_list->statements[i];
@@ -164,7 +218,7 @@ void emit_bytes(struct statement_list *stmnt_list, struct symbol_table *symtbl, 
                 exit(1);
             }
 
-            emit_instruction(&stmnt->instruction, symtbl, cur_seg);
+            emit_instruction(&stmnt->instruction, symtbl, relocs, seg_table, cur_seg);
         } else if (stmnt->type == ST_SYMBOL) {
             if (cur_seg == NULL) {
                 printf("\"Where are me fookin segments at mate?\" said the symbol");
