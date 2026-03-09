@@ -1,0 +1,12 @@
+{
+  "ADD_TESTS": {
+    "instruction": "ADD",
+    "registers": ["A", "B", "C", "D", "SI", "DI", "BR", "F", "BP", "SP", "IP"],
+    "mode": ["rm_ind", "absolute", "rm_disp", "reg_reg", "sib", "imm_reg", "sib_disp", "imm_mem"]
+  },
+  "SUB_TESTS" : {
+    "instruction": "SUB",
+    "registers": ["A", "B", "C", "D", "SI", "DI", "BR", "F", "BP", "SP", "IP"],
+    "mode": ["rm_ind", "absolute", "rm_disp", "reg_reg", "sib", "imm_reg", "sib_disp", "imm_mem"]
+  }
+}
