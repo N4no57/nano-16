@@ -5,7 +5,7 @@
 === OVERVIEW ===
 * 16 MiB Banked Memory (~64KB pages)(24-bit address space)
 * words size 16 bits
-* little endian
+* big endian
 * variable length instruction encoding with prefixes and extensions
 * encoding summary:
 	[Prefixes...] [Opcode Byte(s)] [modR/M?] [SIB?] [Displacement?] [Immediate?]
