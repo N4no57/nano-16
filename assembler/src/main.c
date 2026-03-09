@@ -5,6 +5,7 @@
 #include "../include/byte_emitter.h"
 #include "../include/tokeniser.h"
 #include "../include/parser.h"
+#include "../include/object_file_writer.h"
 
 int main(int argc, char **argv) {
     char filename[] = "test.asm";
@@ -49,6 +50,33 @@ int main(int argc, char **argv) {
     reloc_table_init(&reloc_table);
 
     emit_bytes(&stmnt_list, &symtbl, &seg_table, &reloc_table);
+
+    obj_file obj = {0};
+
+    // header file
+    u8 magic[4] = {'N', 'A', 'N', 'O'};
+    memcpy(obj.header.magic, magic, 4);
+    obj.header.version = 1;
+    obj.header.num_segments = seg_table.count;
+    obj.header.num_symbols = symtbl.symbol_count;
+    obj.header.num_relocations = reloc_table.count;
+
+    // segment table
+    obj.segment_table.capacity = seg_table.capacity;
+    obj.segment_table.count = seg_table.count;
+    obj.segment_table.segments = seg_table.segments;
+
+    // symbol table
+    obj.symbol_table.capacity = symtbl.capacity;
+    obj.symbol_table.symbol_count = symtbl.symbol_count;
+    obj.symbol_table.symbols = symtbl.symbols;
+
+    // relocation table
+    obj.relocation_table.capacity = reloc_table.capacity;
+    obj.relocation_table.count = reloc_table.count;
+    obj.relocation_table.entries = reloc_table.entries;
+
+    writeObjFile(&obj, "test.o");
 
     free(buffer);
     free(tokens);
