@@ -23,6 +23,20 @@ opcodes = {
     "not":  (0, 0b00000101)
 }
 
+registers = {
+    "A": 0,
+    "B": 1,
+    "C": 2,
+    "D": 3,
+    "SI": 4,
+    "DI": 5,
+    "BR": 11,
+    "F":  12,
+    "BP": 13,
+    "SP": 14,
+    "IP": 15
+}
+
 def calculate_prefixes(param):
     out = []
     high_registers = ["BR", "F", "BP", "SP", "IP"]
@@ -57,8 +71,10 @@ def calculate_prefixes(param):
 
     return out
 
-def calculate_operand_bytes():
-    pass
+def calculate_operand_bytes(param, has_OEX):
+    out = []
+
+    return out
 
 def calculate_expected_bytes(param, op_class):
     out = []
