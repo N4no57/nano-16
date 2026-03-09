@@ -71,7 +71,7 @@ def calculate_prefixes(param):
 
     return out
 
-def calculate_operand_bytes(param, has_OEX):
+def calculate_operand_bytes(param, has_OEX, direction):
     out = []
 
     return out
