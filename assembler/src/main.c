@@ -7,9 +7,7 @@
 #include "../include/parser.h"
 #include "../include/object_file_writer.h"
 
-int main(int argc, char **argv) {
-    char filename[] = "test.asm";
-
+int run(char *filename) {
     FILE *f = fopen(filename, "r");
 
     if (f == NULL) {
@@ -87,5 +85,9 @@ int main(int argc, char **argv) {
     }
     free(seg_table.segments);
     free(reloc_table.entries);
+}
+
+int main(int argc, char **argv) {
+    run("test.asm");
     return 0;
 }
