@@ -7,61 +7,61 @@
 
 .segment code
 start:
-    MOV A, B                ; reg -> reg
-    MOV C, [DI]             ; reg <- reg-indirect
-    MOV [SI+4], D           ; reg-indirect + displacement
-    MOV word [0x2000], 0x1234   ; absolute with explicit size (OEX handled)
-    MOV [BP+DI*2], A        ; SIB addressing
-    MOV [BP+DI*2+8], B      ; SIB + displacement
+    MOV A, B                ; reg -> reg (0x08 0xC1)
+    MOV C, [DI]             ; reg <- reg-indirect (0x08 0x15)
+    MOV [SI+4], D           ; reg-indirect + displacement (0x28 0x9C 0x04)
+    MOV word [DI], 0x1234   ; absolute with explicit size (OEX handled) ((0x61 and 0x51) 0x28 0xC5 0x34 0x12)
+    MOV [BP+DI*2], A        ; SIB addressing ((0x42 and 0x51) 0x28 0x00 0x6D)
+    MOV [BP+DI*2+8], B      ; SIB + displacement ((0x42 and 0x51) 0x28 0x88 0x6D 0x08)
 
-    ADD A, C                ; simple ALU
-    ADC B, [SI]             ; extended opcode
-    SUB D, [0x3000]         ; absolute memory
-    INC A                   ; unary extended
-    DEC B
-    MUL C, A
-    DIV D, B
-    NOT [DI+2]              ; unary, memory + displacement
+    ADD A, C                ; simple ALU 0x00 0xC2
+    ADC B, [SI]             ; extended opcode 0x80 0x00 0x09
+    SUB D, [0x3000]         ; absolute memory (0x61) 0x01 0x1D 0x00 0x30
+    INC A                   ; unary extended 0x80 0x01 0xC0
+    DEC B                   ; 0x80 0x02 0xC1
+    MUL C, A                ; 0x80 0x03 0xD0
+    DIV D, B                ; 0x80 0x04 0xD9
+    NOT [DI+2]              ; unary, memory + displacement 0x80 0x05 0x1D 0x02
 
-    AND A, B
-    OR  C, D
-    XOR [SI], 0xFF
-    CMP A, [DI]
+    AND A, B                ; 0x02 0xC1
+    OR  C, D                ; 0x03 0xD3
+    XOR [SI], 0xFF          ; (0x51) 0x24 0x38 0xFF
+    CMP A, [DI]             ; 0x05 0x05
 
 ; Control flow / labels
 loop_start:
-    JZ end_loop
-    JNZ loop_start
-    JC  carry_handler
-    JNC no_carry
-    JA  greater
-    JBE less_or_equal
+    JZ end_loop             ; 0x11 0xFF
+    JNZ loop_start          ; 0x12 0xFF
+    JC  carry_handler       ; 0x13 0xFF
+    JNC no_carry            ; 0x14 0xFF
+    JA  greater             ; 0x90 0x00 0xFF
+    JBE less_or_equal       ; 0x90 0x03 0xFF
 
 carry_handler:
-    SUB A, 1
-    RET
+    SUB A, 1                ; (0x51) 0x21 0x38 0x01
+    RET                     ; 0x16
 
 no_carry:
-    INC B
-    JMP loop_start
+    INC B                   ; 0x80 0x01 0xC1
+    JMP loop_start          ; 0x10 0xFF
 
 greater:
-    MOV D, 0x10
-    JLE loop_start
+    MOV D, 0x10             ; (0x51) 0x08 0x3B 0x10
+    JLE loop_start          ; 0x90 0x07 0xFF
 
 end_loop:
-    NOP
-    HLT
+    NOP                     ; 0x18
+    HLT                     ; 0x19
 
 ; Stack ops
-    PUSH A
-    PUSH [SI+6]
-    POP B
-    POP [DI]
+    PUSH A                  ; 0x09 0xC0
+    PUSH [SI+6]             ; 0x09 0x24 0x06
+    POP B                   ; 0x0A 0xC1
+    POP [DI]                ; 0x0A 0x05
 
 ; I/O instructions
-    INB  [0x80]
-    OUTB [0x80], A
+    INB  [0x80]             ; (0x61) 0x0B 0x0D 0x80 0x00
+    OUTB [0x80], A          ; (0x61) 0x2C 0x08 0x80 0x00
 
 ; Load effective address
-    LEA C, [BP+SI*4+12]
+    LEA C, [BP+SI*4+12]     ; (0x42 0x51) 0x0D 0x10 0xA4 0x0C

@@ -19,7 +19,7 @@
 #define MOD_SIB 0
 #define MOD_IMM_REG 1
 #define MOD_SIB_DISP 2
-#define MOD_IMM_MEM 1
+#define MOD_IMM_MEM 3
 
 struct operand_analysis {
     /* ========= Register side ========= */
