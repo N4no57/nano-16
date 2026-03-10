@@ -1,5 +1,6 @@
 import json
 import random
+from operator import index
 
 with open('instructions\\alu.json', 'r') as f:
     data = json.load(f)
@@ -21,6 +22,17 @@ opcodes = {
     "mul":  (0, 0b00000011),
     "div":  (0, 0b00000100),
     "not":  (0, 0b00000101)
+}
+
+modes = {
+    "rm_ind": 0,
+    "absolute": 1,
+    "rm_disp": 2,
+    "reg_reg": 3,
+    "sib": 0,
+    "imm_reg": 1,
+    "sib_disp": 2,
+    "imm_mem": 3
 }
 
 registers = {
@@ -71,24 +83,100 @@ def calculate_prefixes(param):
 
     return out
 
-def calculate_operand_bytes(param, has_OEX, direction):
+def calculate_operand_bytes(param, has_OEX):
     out = []
+    modrm_modes = ["rm_ind", "absolute", "rm_disp", "reg_reg", "sib", "imm_reg", "sib_disp", "imm_mem"]
+
+    mode = param[1]
+    if mode in modrm_modes:
+        if mode == "reg_reg":
+            dest = registers[param[2]]
+            src = registers[param[3]]
+            if dest > 7: dest = (dest >> 1) & 7
+            if src > 7: src = (src >> 1) & 7
+
+            out.append(modes[mode] << 6 | (dest & 7) << 3 | (src & 7))
+            return out
+
+        if mode == "imm_reg":
+            dest = registers[param[2]]
+            if dest > 7: dest = (dest >> 1) & 7
+
+            out.append(modes[mode] << 6 | (dest & 7) << 3 | (0 & 7))
+
+            out.append(param[4] & 0xff)
+            if has_OEX:
+                out.append((param[4] >> 8) & 0xff)
+
+            return out
+
+        if mode == "imm_mem":
+            dest = registers[param[2]]
+            if dest > 7: dest = (dest >> 1) & 7
+
+            out.append(modes[mode] << 6 | (0 & 7) << 3 | (dest & 7))
+
+            out.append(param[4] & 0xff)
+            if has_OEX:
+                out.append((param[4] >> 8) & 0xff)
+
+            return out
+
+        if mode == "absolute":
+            dest = registers[param[2]]
+            if dest > 7: dest = (dest >> 1) & 7
+
+            out.append(modes[mode] << 6 | (dest & 7) << 3 | (0 & 7))
+
+            out.append(param[4] & 0xff)
+            if has_OEX:
+                out.append((param[4] >> 8) & 0xff)
+
+            return out
+
+        if mode in ["rm_ind", "rm_disp"]:
+            dest = registers[param[2]]
+            src = registers[param[3]]
+            if dest > 7: dest = (dest >> 1) & 7
+            if src > 7: src = (src >> 1) & 7
+
+            out.append(modes[mode] << 6 | (dest & 7) << 3 | (src & 7))
+        elif mode in ["sib", "sib_disp"]:
+            dest =registers[param[2]]
+            sib = param[3]
+            idx = registers[sib[0]]
+            base = registers[sib[1]]
+            if dest > 7: dest = (dest >> 1) & 7
+            if idx > 7: idx = (idx >> 1) & 7
+            if base > 7: base = (base >> 1) & 7
+
+            out.append(modes[mode] << 6 | (dest & 7) << 3 | (0 & 7))
+            out.append(sib[2] << 6 | (idx & 7) << 3 | (base & 7))
+
+        if mode in ["rm_disp", "sib_disp"]:
+            out.append(param[4] & 0xff)
+            if has_OEX:
+                out.append((param[4] >> 8) & 0xff)
 
     return out
 
-def calculate_expected_bytes(param, op_class):
+def calculate_expected_bytes(param, op_class, directionality):
     out = []
+    has_oex = 0
 
     out.extend(calculate_prefixes(param))
 
-    for i in range(0, 2):
-        #define GEN_OPCODE(ext, dir, cls, opc) (((ext) << 7) | ((0) << 6) | ((dir) << 5) | ((cls) << 3) | (opc))
-        opc = opcodes[str(param[0]).lower()]
-        if opc[1] is not None:
-            out.append(0b10000000 | (i << 5) | (op_class << 3) | opc[0])
-            out.append(opc[1])
-        else:
-            out.append(0 | (i << 5) | (op_class << 3) | opc[0])
+    for byte in out:
+        if (byte & 0xf0) == 0x60: has_oex = 1
+
+    opc = opcodes[str(param[0]).lower()]
+    if opc[1] is not None:
+        out.append(0b10000000 | (directionality << 5) | (op_class << 3) | opc[0])
+        out.append(opc[1])
+    else:
+        out.append(0 | (directionality << 5) | (op_class << 3) | opc[0])
+
+    out.extend(calculate_operand_bytes(param, has_oex))
 
     return out
 
@@ -145,4 +233,6 @@ for spec in data.values():
 
 for spec in all_params:
     for param in spec:
-        calculate_expected_bytes(param, 0)
+        tmp = [calculate_expected_bytes(param, 0, 0), calculate_expected_bytes(param, 0, 1)]
+        expected_bytes.append(tmp)
+
