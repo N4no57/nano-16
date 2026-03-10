@@ -235,4 +235,3 @@ for spec in all_params:
     for param in spec:
         tmp = [calculate_expected_bytes(param, 0, 0), calculate_expected_bytes(param, 0, 1)]
         expected_bytes.append(tmp)
-

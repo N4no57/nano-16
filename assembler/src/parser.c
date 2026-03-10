@@ -39,6 +39,7 @@ struct operand_analysis {
         MEM_ABS                  // [absolute]
     } mem_kind;
 
+    i8 has_rm;
     enum registers rm;            // base register (ModR/M.rm)
     u8  rm_src_index;
 
@@ -352,7 +353,8 @@ void parse_value(const token_list *tokens, token *current_tok, size_t *tok_idx,
         oprd.has_symbol = true;
         record_token(current_tok, result);
     } else { // actual number
-        oprd.imm = (unsigned int)current_tok->type;
+        u32 *tmp = current_tok->value;
+        oprd.imm = *tmp;
         oprd.size = oprd.imm > 0xFF ? 2 : 1; // not full proof need to update this when refining assembler
     }
     inst->oprs[inst->operands++] = oprd;
@@ -621,39 +623,38 @@ i32 calc_mode(const struct operand_analysis *op) {
     // mode = 10 if R/M ± 8/16-bit displacement
     // mode = 11 if reg to reg
 
-    if (!op->has_mem) {
-        if (op->has_imm) {
-            return MOD_IMM_REG;
-        }
-        return MOD_REG_REG;
-    }
-
-    if (op->mem_kind == MEM_RM) {
-        if (op->has_disp) {
-            return MOD_RM_DISP;
-        }
-        return MOD_RM_IND;
-    }
-
-    if (op->mem_kind == MEM_ABS) {
-        return MOD_ABSOLUTE;
-    }
-
     // AEX prefix + mode = 00 if SIB
     // AEX prefix + mode = 01 if immediate (not to mem)
     // AEX prefix + mode = 10 if SIB ± disp
     // AEX prefix + mode = 11 if Immediate (to mem)
 
-    if (op->mem_kind == MEM_SIB) {
+    if (op->has_abs) {
+        return MOD_ABSOLUTE;
+    }
+
+    if (op->has_imm) {
+        if (op->has_rm) {
+            return MOD_IMM_MEM;
+        }
+        return MOD_IMM_REG;
+    }
+
+    if (op->has_sib) {
         if (op->has_disp) {
             return MOD_SIB_DISP;
         }
         return MOD_SIB;
     }
 
-    if (op->has_imm) {
-        return MOD_IMM_REG;
+    if (op->has_disp) {
+        return MOD_RM_DISP;
     }
+
+    if (op->has_reg && op->has_rm) {
+        return MOD_REG_REG;
+    }
+
+    return MOD_RM_IND;
 
     perror("Unfindable mode");
     exit(EXIT_FAILURE);
@@ -687,6 +688,7 @@ struct operand_analysis capture_operands(const struct instruction *inst) {
                 }
                 // if this is the 2nd reg then it is the rm field in ModR/M
                 result.rm = op.reg;
+                result.has_rm = 1;
                 result.rm_src_index = i;
                 // mark this as reg->reg
                 result.mod = MOD_REG_REG;
@@ -698,6 +700,7 @@ struct operand_analysis capture_operands(const struct instruction *inst) {
                 result.mem_kind = MEM_RM;
 
                 result.rm = op.reg;
+                result.has_rm = 1;
                 result.rm_src_index = i;
                 break;
             case OPERAND_SIB:
@@ -732,12 +735,11 @@ struct operand_analysis capture_operands(const struct instruction *inst) {
             case OPERAND_IMM:
                 result.has_imm = 1;
                 result.imm_src_index = i;
-                result.imm_size = 2;
+                result.imm_size = op.size;
                 if (op.has_symbol) {
                     result.is_imm_sym = 1;
                 } else {
                     result.imm_value = op.imm;
-                    if (op.imm < 256) result.imm_size = 1;
                 }
                 break;
             default:
@@ -749,6 +751,10 @@ struct operand_analysis capture_operands(const struct instruction *inst) {
     result.mem_kind = (u8)has_memory(result);
     if (result.mem_kind != MEM_NONE) {
         result.has_mem = 1;
+    }
+
+    if (result.has_reg || result.has_rm) {
+        result.needs_modrm = 1;
     }
 
     result.direction = determine_directionality(&result);
@@ -771,7 +777,7 @@ void determine_prefixes(struct operand_analysis *op) {
 
     if (op->reg >= 8 && op->reg != NIL) rex_pre |= REX_PREFIX(0, 1, 0, 0);
     if (op->rm >= 8 && op->rm != NIL) rex_pre |= REX_PREFIX(1, 0, 0, 0);
-    if (op->mem_kind == MEM_SIB) {
+    if (op->has_sib) {
         if (op->sib_index >= 8 && op->sib_index != NIL) rex_pre |= REX_PREFIX(0, 0, 1, 0);
         if (op->sib_base >= 8 && op->sib_base != NIL) rex_pre |= REX_PREFIX(0, 0, 0, 1);
     }
@@ -780,7 +786,7 @@ void determine_prefixes(struct operand_analysis *op) {
     // X = reserved for future expantion/unused
     // M = extend mode field in modR/M, effectively the 2 bit mode field is 3 bits
 
-    if (op->has_imm || op->mem_kind == MEM_SIB) aex_pre |= AEX_PREFIX(1);
+    if (op->has_imm || op->has_sib) aex_pre |= AEX_PREFIX(1);
 
     // OEX prefix
     // X = reserved for future expantion/unused
@@ -826,7 +832,7 @@ void rearrange_instruction(struct instruction *inst, struct operand_analysis *op
     // again depends on how I do it
     // nah I am dumb there is a value... stupid me
     // no complex checks are needed just check the value FAAAAAAAAAAAA
-    if (op->has_mem) {
+    if (op->needs_modrm) {
         struct operand reop = {0};
         reop.type = OPERAND_MODRM;
         reop.modrm.directionality = op->direction; // pray to the assembler gods this is correct
