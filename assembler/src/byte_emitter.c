@@ -178,8 +178,12 @@ void emit_instruction(const struct instruction *inst, struct symbol_table *symtb
         const struct operand *op = &inst->oprs[j];
         if (op->type == OPERAND_MODRM) {
             info.dir = op->modrm.directionality;
+            if (op->modrm.reg > 7) op->modrm.reg >> 1 & 7;
+            if (op->modrm.rm > 7) op->modrm.rm >> 1 & 7;
             bytes[byte_idx++] = GEN_MODRM(op->modrm.mod, op->modrm.reg, op->modrm.rm);
         } else if (op->type == OPERAND_SIB) {
+            if (op->sib.idx > 7) op->sib.idx >> 1 & 7;
+            if (op->sib.base > 7) op->sib.base >> 1 & 7;
             bytes[byte_idx++] = GEN_SIB(op->sib.mod, op->sib.idx, op->sib.base);
         } else if (op->type == OPERAND_ABS || op->type == OPERAND_IMM) {
             if (op->has_symbol) {
