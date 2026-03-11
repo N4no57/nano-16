@@ -165,8 +165,10 @@ void emit_symbol(const struct operand *op, segment_table *seg_table, struct symb
 void emit_instruction(const struct instruction *inst, struct symbol_table *symtbl, relocation_table *relocs, segment_table *seg_tbl, segment *cur_seg) {
     u8 bytes[MAX_BYTES] = {0};
     u64 byte_idx = 0;
+    u8 has_oex = 0;
 
     for (int j = 0; j < inst->prefix_count; j++) {
+        if (OEX == (inst->prefixes[j] & OEX)) has_oex = 1;
         bytes[byte_idx++] = inst->prefixes[j];
     }
 
@@ -190,7 +192,7 @@ void emit_instruction(const struct instruction *inst, struct symbol_table *symtb
                 emit_symbol(op, seg_tbl, symtbl, relocs, cur_seg, bytes, &byte_idx);
             } else {
                 bytes[byte_idx++] = op->imm & 0xff;
-                if (op->size > 255) {
+                if (has_oex) {
                     bytes[byte_idx++] = (op->imm & 0xff00) >> 8;
                 }
             }
@@ -199,7 +201,7 @@ void emit_instruction(const struct instruction *inst, struct symbol_table *symtb
                 emit_symbol(op, seg_tbl, symtbl, relocs, cur_seg, bytes, &byte_idx);
             } else {
                 bytes[byte_idx++] = op->disp & 0xff;
-                if (op->size < -128 || op->size > 127) {
+                if (has_oex) {
                     bytes[byte_idx++] = (op->disp & 0xff00) >> 8;
                 }
             }

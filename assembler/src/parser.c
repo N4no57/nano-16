@@ -650,7 +650,7 @@ i32 calc_mode(const struct operand_analysis *op) {
         return MOD_RM_DISP;
     }
 
-    if (op->has_reg && op->has_rm) {
+    if ((op->has_reg && op->has_rm) && op->mod == MOD_REG_REG) {
         return MOD_REG_REG;
     }
 
@@ -661,13 +661,22 @@ i32 calc_mode(const struct operand_analysis *op) {
 }
 
 u8 determine_directionality(const struct operand_analysis *op) {
-    if (op->has_mem) {
-        if (op->reg_src_index == 0) {
-            return RM_TO_REG;
+    u8 retval = 0xff;
+    if ((op->has_reg && op->has_rm) && (!op->has_sib || !op->has_abs) && (!op->has_disp )) {
+        retval = RM_TO_REG;
+    } else if (op->has_sib || op->has_rm || op->has_abs) {
+        u8 mem_src_idx = 0;
+        if (op->has_sib) mem_src_idx = op->sib_src_index;
+        else if (op->has_rm) mem_src_idx = op->rm_src_index;
+        else mem_src_idx = op->abs_src_index;
+
+        if (mem_src_idx > op->reg_src_index) {
+            retval =  RM_TO_REG;
         }
-        return REG_TO_RM;
+        retval = REG_TO_RM;
     }
-    return RM_TO_REG;
+
+    return retval;
 }
 
 struct operand_analysis capture_operands(const struct instruction *inst) {
@@ -717,7 +726,7 @@ struct operand_analysis capture_operands(const struct instruction *inst) {
                 if (op.has_symbol) {
                     result.is_disp_sym = 1;
                 } else {
-                    if (op.disp <= 127 || op.disp >= -128) result.disp_size = 1;
+                    result.disp_size = op.size;
                     result.disp_value = op.disp;
                 }
                 break;
@@ -728,17 +737,18 @@ struct operand_analysis capture_operands(const struct instruction *inst) {
                 if (op.has_symbol) {
                     result.is_abs_sym = 1;
                 } else {
-                    if (op.imm < 256) result.abs_size = 1;
+                    result.abs_size = op.size;
                     result.abs_value = op.imm;
                 }
                 break;
             case OPERAND_IMM:
                 result.has_imm = 1;
                 result.imm_src_index = i;
-                result.imm_size = op.size;
+                result.imm_size = 2;
                 if (op.has_symbol) {
                     result.is_imm_sym = 1;
                 } else {
+                    result.imm_size = op.size;
                     result.imm_value = op.imm;
                 }
                 break;
@@ -792,8 +802,8 @@ void determine_prefixes(struct operand_analysis *op) {
     // X = reserved for future expantion/unused
     // W = extend width to 16-bit operands when
 
-    if (op->has_imm || op->has_disp) {
-        if (op->imm_size == 2 || op->disp_size == 2) oex_pre |= OEX_PREFIX(1);
+    if (op->has_imm || op->has_disp || op->has_abs) {
+        if (op->imm_size == 2 || op->disp_size == 2 || op->abs_size == 2) oex_pre |= OEX_PREFIX(1);
     }
 
     if (rex_pre > REX) {
@@ -819,9 +829,9 @@ void rearrange_instruction(struct instruction *inst, struct operand_analysis *op
     u8 idx = 0;
 
     // put in the prefixes if necessary
-    if (op->needs_rex) inst->prefixes[inst->prefix_count++];
-    if (op->needs_aex) inst->prefixes[inst->prefix_count++];
-    if (op->needs_oex) inst->prefixes[inst->prefix_count++];
+    if (op->needs_rex) inst->prefixes[inst->prefix_count++] = op->needs_rex;
+    if (op->needs_aex) inst->prefixes[inst->prefix_count++] = op->needs_aex;
+    if (op->needs_oex) inst->prefixes[inst->prefix_count++] = op->needs_oex;
 
     // check if modR/M exists then insert
     // this is the true bit of the schizo post
