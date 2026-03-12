@@ -10,4 +10,6 @@ add_executable(na16-as src/main.c
         src/byte_emitter.c include/byte_emitter.h
         src/object_file_writer.c
         include/object_file_writer.h
+        include/assembler.c
+        include/assembler.h
 )
