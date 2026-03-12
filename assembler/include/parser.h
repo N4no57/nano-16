@@ -120,6 +120,8 @@ struct instruction { // an instruction after parsing
     i8 prefix_count;
     u8 prefixes[MAX_PREFIX]; // prefix bytes
 
+    u8 global_size;
+
     u8 operands; // how many operands
     struct operand oprs[MAX_OPERANDS];
 };

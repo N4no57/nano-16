@@ -104,6 +104,17 @@ struct operand_analysis {
     u8  operand_span_end;        // last operand index consumed
 };
 
+u8 is_unary_inst[] = {
+    0, 0, 0, 0, 0, 0, 0,    // ADD, SUB, AND, OR, XOR, CMP, TEST
+    1, 1,                   // SHL, SHR
+    0, 1, 1, 0, 0, 0, 0, 1, // ADC, INC, DEC, MUL, DIV, NOT, MOV, PUSH
+    1, 0, 0, 0, 0, 0, 0,    // POP, INB, OUTB, LEA, JMP, JZ, JNZ
+    0, 0,                   // JE, JNE
+    0, 0, 0, 0, 0, 0, 0, 0, // JC, JNC, CALL, RET, JA, JAE, JB, JBE
+    0, 0, 0, 0, 0, 0,       // JG, JGE, JL, JLE, NOP, HLT
+    0                       // UNKNOWN
+};
+
 i64 find_symbol(const struct symbol_table *tbl, const char *name) {
     for (i64 i = 0; i < tbl->symbol_count; i++) {
         if (strcmp(tbl->symbols[i].name, name) == 0) {
@@ -470,9 +481,9 @@ void parse_operands(const token_list *tokens, token *current_tok, size_t *tok_id
             tmp[len] = '\0';
             toUpper(tmp);
             if (strcmp("WORD", tmp) == 0) {
-                oprd.size = 2;
+                inst->global_size = 2;
             } else if (strcmp("BYTE", tmp) == 0) {
-                oprd.size = 1;
+                inst->global_size = 1;
             } else {
                 print_error(&current_tok->pos, "Expected \"WORD\" or \"BYTE\"");
             }
@@ -521,6 +532,7 @@ void first_pass(const token_list *tokens, token *current_tok, size_t *tok_idx, s
             inst.opc = matchOpcode(current_tok->value);
             inst.pos = current_tok->pos;
             inst.prefix_count = 0;
+            inst.global_size = 0;
             inst.operands = 0;
 
             // token mnemonic = current_tok;
@@ -661,21 +673,20 @@ i32 calc_mode(const struct operand_analysis *op) {
 }
 
 u8 determine_directionality(const struct operand_analysis *op) {
-    u8 retval = 0xff;
-    if ((op->has_reg && op->has_rm) && (!op->has_sib || !op->has_abs) && (!op->has_disp )) {
-        retval = RM_TO_REG;
-    } else if (op->has_sib || op->has_rm || op->has_abs) {
-        u8 mem_src_idx = 0;
-        if (op->has_sib) mem_src_idx = op->sib_src_index;
-        else if (op->has_rm) mem_src_idx = op->rm_src_index;
-        else mem_src_idx = op->abs_src_index;
+    u8 retval;
+    u8 mem_src_idx;
+    u8 reg_src_idx = 0xff;
 
-        if (mem_src_idx > op->reg_src_index) {
-            retval =  RM_TO_REG;
-        }
-        retval = REG_TO_RM;
+    if (op->has_reg) reg_src_idx = op->reg_src_index;
+
+    if (op->has_sib) mem_src_idx = op->sib_src_index;
+    else if (op->has_abs) mem_src_idx = op->abs_src_index;
+    else mem_src_idx = op->rm_src_index;
+
+    if (reg_src_idx == 0xff) {
+        reg_src_idx = op->imm_src_index;
     }
-
+    retval = mem_src_idx < reg_src_idx; // reg -> rm if true otherwise rm -> reg
     return retval;
 }
 
@@ -831,7 +842,9 @@ void rearrange_instruction(struct instruction *inst, struct operand_analysis *op
     // put in the prefixes if necessary
     if (op->needs_rex) inst->prefixes[inst->prefix_count++] = op->needs_rex;
     if (op->needs_aex) inst->prefixes[inst->prefix_count++] = op->needs_aex;
-    if (op->needs_oex) inst->prefixes[inst->prefix_count++] = op->needs_oex;
+
+    if (inst->global_size == 2) inst->prefixes[inst->prefix_count++] = OEX_PREFIX(1);
+    else if (op->needs_oex) inst->prefixes[inst->prefix_count++] = op->needs_oex;
 
     // check if modR/M exists then insert
     // this is the true bit of the schizo post
@@ -842,6 +855,17 @@ void rearrange_instruction(struct instruction *inst, struct operand_analysis *op
     // again depends on how I do it
     // nah I am dumb there is a value... stupid me
     // no complex checks are needed just check the value FAAAAAAAAAAAA
+
+    if (is_unary_inst[inst->opc]) {
+        inst->operands = 1;
+        inst->oprs[0].type = OPERAND_MODRM;
+        inst->oprs[0].modrm.directionality = RM_TO_REG;
+        inst->oprs[0].modrm.mod = MOD_REG_REG;
+        inst->oprs[0].modrm.rm = op->reg;
+        inst->oprs[0].modrm.reg = op->reg;
+        return;
+    }
+
     if (op->needs_modrm) {
         struct operand reop = {0};
         reop.type = OPERAND_MODRM;

@@ -162,7 +162,7 @@ void emit_symbol(const struct operand *op, segment_table *seg_table, struct symb
     push_bytes(current_seg, bytes, *idx);
 }
 
-void emit_instruction(const struct instruction *inst, struct symbol_table *symtbl, relocation_table *relocs, segment_table *seg_tbl, segment *cur_seg) {
+void emit_instruction(struct instruction *inst, struct symbol_table *symtbl, relocation_table *relocs, segment_table *seg_tbl, segment *cur_seg) {
     u8 bytes[MAX_BYTES] = {0};
     u64 byte_idx = 0;
     u8 has_oex = 0;
@@ -177,15 +177,20 @@ void emit_instruction(const struct instruction *inst, struct symbol_table *symtb
     byte_idx += 1 + info.is_ext;
 
     for (int j = 0; j < inst->operands; j++) {
-        const struct operand *op = &inst->oprs[j];
+        struct operand *op = &inst->oprs[j];
         if (op->type == OPERAND_MODRM) {
             info.dir = op->modrm.directionality;
             if (op->modrm.reg > 7) op->modrm.reg >> 1 & 7;
             if (op->modrm.rm > 7) op->modrm.rm >> 1 & 7;
+            if (op->modrm.rm == NIL) op->modrm.rm = 0;
             bytes[byte_idx++] = GEN_MODRM(op->modrm.mod, op->modrm.reg, op->modrm.rm);
         } else if (op->type == OPERAND_SIB) {
             if (op->sib.idx > 7) op->sib.idx >> 1 & 7;
             if (op->sib.base > 7) op->sib.base >> 1 & 7;
+            if (op->sib.mod == 2) op->sib.mod = 0b01;
+            else if (op->sib.mod == 4) op->sib.mod = 0b10;
+            else if (op->sib.mod == 8) op->sib.mod = 0b11;
+            else op->sib.mod = 0b00;
             bytes[byte_idx++] = GEN_SIB(op->sib.mod, op->sib.idx, op->sib.base);
         } else if (op->type == OPERAND_ABS || op->type == OPERAND_IMM) {
             if (op->has_symbol) {

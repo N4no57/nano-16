@@ -67,7 +67,7 @@ void writeObjFile(obj_file *obj, const char *filename) {
     // actual data
     for (u64 i = 0; i < obj->header.num_segments; i++) {
         segment *seg = &obj->segment_table.segments[i];
-        fwrite(&seg->data, seg->size, 1, file);
+        fwrite(seg->data, seg->size, 1, file);
     }
 
     fclose(file);
