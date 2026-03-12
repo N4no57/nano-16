@@ -266,14 +266,65 @@ void emit_bytes(struct statement_list *stmnt_list, struct symbol_table *symtbl, 
 
                 seg_table->current_seg = find_segment(seg_table, dir->args.data[0].value);
                 cur_seg = &seg_table->segments[seg_table->current_seg];
-            } else if (strcmp(dir->name, "db") == 0) { // TODO
+            } else if (strcmp(dir->name, "db") == 0) {
+                for (u32 j = 0; j < dir->value_count; j++) {
+                    struct directive_value *value = &dir->values[j];
+                    u8 bytes[MAX_BYTES] = {0};
+                    u64 byte_idx = 0;
 
+                    if (value->kind != DIR_LITERAL) {
+                        print_error(&dir->pos, "You did not do this right ya moron\nIts only supposed to be numbers\n");
+                    }
+                    bytes[byte_idx++] = value->literal & 0xff;
+                    push_bytes(cur_seg, bytes, byte_idx);
+                }
             } else if (strcmp(dir->name, "dw") == 0) {
+                for (u32 j = 0; j < dir->value_count; j++) {
+                    struct directive_value *value = &dir->values[j];
+                    u8 bytes[MAX_BYTES] = {0};
+                    u64 byte_idx = 0;
 
+                    if (value->kind != DIR_LITERAL) {
+                        print_error(&dir->pos, "You did not do this right ya moron\nIts only supposed to be numbers\n");
+                    }
+                    bytes[byte_idx++] = value->literal & 0xff;
+                    bytes[byte_idx++] = value->literal >> 8 & 0xff;
+                    push_bytes(cur_seg, bytes, byte_idx);
+                }
             } else if (strcmp(dir->name, "dd") == 0) {
+                for (u32 j = 0; j < dir->value_count; j++) {
+                    struct directive_value *value = &dir->values[j];
+                    u8 bytes[MAX_BYTES] = {0};
+                    u64 byte_idx = 0;
 
+                    if (value->kind != DIR_LITERAL) {
+                        print_error(&dir->pos, "You did not do this right ya moron\nIts only supposed to be numbers\n");
+                    }
+                    bytes[byte_idx++] = value->literal & 0xff;
+                    bytes[byte_idx++] = value->literal >> 8 & 0xff;
+                    bytes[byte_idx++] = value->literal >> 16 & 0xff;
+                    bytes[byte_idx++] = value->literal >> 24 & 0xff;
+                    push_bytes(cur_seg, bytes, byte_idx);
+                }
             } else if (strcmp(dir->name, "dq") == 0) {
+                for (u32 j = 0; j < dir->value_count; j++) {
+                    struct directive_value *value = &dir->values[j];
+                    u8 bytes[MAX_BYTES] = {0};
+                    u64 byte_idx = 0;
 
+                    if (value->kind != DIR_LITERAL) {
+                        print_error(&dir->pos, "You did not do this right ya moron\nIts only supposed to be numbers\n");
+                    }
+                    bytes[byte_idx++] = value->literal & 0xff;
+                    bytes[byte_idx++] = value->literal >> 8 & 0xff;
+                    bytes[byte_idx++] = value->literal >> 16 & 0xff;
+                    bytes[byte_idx++] = value->literal >> 24 & 0xff;
+                    bytes[byte_idx++] = value->literal >> 32 & 0xff;
+                    bytes[byte_idx++] = value->literal >> 40 & 0xff;
+                    bytes[byte_idx++] = value->literal >> 48 & 0xff;
+                    bytes[byte_idx++] = value->literal >> 56 & 0xff;
+                    push_bytes(cur_seg, bytes, byte_idx);
+                }
             }
         }
     }

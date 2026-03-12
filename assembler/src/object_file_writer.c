@@ -35,7 +35,7 @@ void writeObjFile(obj_file *obj, const char *filename) {
         fwrite(seg->name, strlen(seg->name), 1, file);
         fwrite(&padding, sizeof(padding), 1, file); // null terminator
         fwrite(&total_size, sizeof(total_size), 1, file); // where it is in the data section
-        fwrite(&seg->size, sizeof(seg->size), 1, file);
+        fwrite(&seg->size, sizeof(seg->size), 1, file); // size
         total_size += seg->size;
     }
 
