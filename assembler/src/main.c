@@ -12,6 +12,7 @@ int run(char *filename) {
 
     if (f == NULL) {
         printf("Error opening file %s\n", filename);
+        return 1;
     }
 
     fseek(f, 0, SEEK_END);
@@ -41,7 +42,7 @@ int run(char *filename) {
     if (seg_table.count == 0) {
         printf("No symbol table found/generated\n");
         printf("what are you doing you donut\n");
-        exit(EXIT_FAILURE);
+        return 1;
     }
 
     relocation_table reloc_table;
@@ -85,9 +86,9 @@ int run(char *filename) {
     }
     free(seg_table.segments);
     free(reloc_table.entries);
+    return 0;
 }
 
 int main(int argc, char **argv) {
-    run("test.asm");
-    return 0;
+    return run("test.asm");
 }
