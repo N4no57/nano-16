@@ -19,6 +19,7 @@ typedef struct {
 typedef struct {
     char *name;
     u8 *data;
+    u64 offset; // where it is in the data section
     u64 size;
 } segment;
 

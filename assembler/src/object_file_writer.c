@@ -44,6 +44,7 @@ void writeObjFile(obj_file *obj, const char *filename) {
         struct symbol *sym = &obj->symbol_table.symbols[i];
         fwrite(sym->name, strlen(sym->name), 1, file);
         fwrite(&padding, sizeof(padding), 1, file); // null terminator
+        fwrite(&sym->type, sizeof(sym->type), 1, file);
         fwrite(&sym->seg_id, sizeof(sym->seg_id), 1, file);
         fwrite(&sym->offset, sizeof(sym->offset), 1, file);
         fwrite(&sym->value, sizeof(sym->value), 1, file);
